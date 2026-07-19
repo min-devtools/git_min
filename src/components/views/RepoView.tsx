@@ -37,7 +37,9 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
   // null = the search bar is closed; "" = open and empty
   const [search, setSearch] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const loaded = log.data?.pages.flat() ?? [];
+  // memoized: a fresh .flat() every render would invalidate searchHits/visible/byHash
+  // and make GraphTable's scroll effects re-fire on every 5s poll re-render
+  const loaded = useMemo(() => log.data?.pages.flat() ?? [], [log.data]);
   // search only highlights — the full list stays visible so the graph keeps its
   // shape. ponytail: matches only the pages already loaded, not the whole
   // history; a backend `git log --grep` search is the upgrade path.

@@ -448,8 +448,10 @@ body.left-collapsed .inspector .index-item > span:not(:first-child),
 body.left-collapsed .inspector .nav-item > span:not(:first-child),
 body.left-collapsed .inspector .nav-item > .badge { display: inline; }
 body.left-collapsed .inspector .index-item > span.change-path { display: flex; }
-body.left-collapsed .inspector .index-item > span.change-stats,
-body.left-collapsed .inspector .index-item > span.diff-stat { display: inline-flex; }
+body.left-collapsed .inspector .index-item > span.change-stats { display: inline-flex; }
+/* .diff-stat is inline by design — its +/- ems are separated by a space text node,
+   which inline-flex would drop (whitespace between flex items isn't rendered) */
+body.left-collapsed .inspector .index-item > span.diff-stat { display: inline; }
 body.left-collapsed .inspector .index-item > span.change-actions { display: none; }
 body.left-collapsed .inspector .change-row:hover > span.change-actions,
 body.left-collapsed .inspector .change-row:focus-within > span.change-actions,
