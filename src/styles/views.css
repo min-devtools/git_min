@@ -217,7 +217,8 @@ body {
 }
 
 .graph-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 120px 68px 48px;
   align-items: center;
   gap: 10px;
   height: 26px;
@@ -243,7 +244,8 @@ body {
 .graph-canvas { position: relative; min-width: 100%; }
 
 .graph-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) 120px 68px 48px;
   align-items: center;
   gap: 10px;
   height: 28px;
