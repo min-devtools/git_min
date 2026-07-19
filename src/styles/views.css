@@ -272,9 +272,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  overflow: hidden;
+  overflow-x: auto;
 }
-.subject-text { overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.subject-text { flex: none; white-space: nowrap; color: var(--text); }
 .graph-row.selected .subject-text { color: var(--text); }
 
 .graph-author { flex: none; width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 0.9231rem; }
