@@ -1,0 +1,45 @@
+{
+  "name": "gitmin",
+  "private": true,
+  "version": "1.0.0-alpha",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "app": "tauri build --bundles app",
+    "run:release": "tauri build --no-bundle && ./src-tauri/target/release/gitmin",
+    "generate:syntax-themes": "node scripts/generate-syntax-themes.mjs",
+    "test:ui": "npx tsx src/lib/gitUi.test.ts",
+    "test:workspace": "node tests/git-workspace-contract.test.mjs",
+    "test:layout": "npx tsx src/lib/graphLayout.test.ts",
+    "test:highlight": "npx tsx src/lib/highlight.test.ts",
+    "test:icons": "npx tsx src/ui/Icon.test.ts",
+    "test:browser": "npx tsx src/lib/browserPreference.test.ts",
+    "test:repos": "npx tsx src/components/Sidebar.test.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.59.0",
+    "@tauri-apps/api": "^2.1.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-store": "^2.1.0",
+    "lucide-react": "^1.24.0",
+    "material-icon-theme": "^5.36.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.20.8",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.9"
+  }
+}

@@ -1,0 +1,1308 @@
+/* git_min — app-local view styles. Shared tokens/layout/components come from
+   design-systems (symlinked); this file loads last and only adds what is
+   git-specific: graph, diff, changes, branches, scan, keymap overlay. */
+
+/* ---- graph rail palette (app-local, cycles by rail index) ---- */
+body {
+  /* every rail derives from the active theme — no hard-coded hues that ignore
+     the palette (the old #22d3ee/#eab308/#ec4899 fallbacks never themed) */
+  --graph-rail-1: var(--blue);
+  --graph-rail-2: var(--green);
+  --graph-rail-3: var(--orange);
+  --graph-rail-4: var(--purple);
+  --graph-rail-5: var(--blue-2);
+  --graph-rail-6: var(--red);
+  --graph-rail-7: color-mix(in oklab, var(--orange), var(--green) 45%);
+  --graph-rail-8: color-mix(in oklab, var(--red), var(--purple) 50%);
+}
+
+.content {
+  position: relative; /* anchor for the view-level .loading-bar / .section-veil */
+  min-height: 0;
+  display: none;
+  overflow: hidden;
+}
+.content.active { display: grid; }
+
+/* ---------------- diff view (centre tab) ---------------- */
+
+.diff-view { container-type: inline-size; }
+.diff-view.active { grid-template-rows: auto 1fr; }
+.diff-view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pane);
+}
+.diff-file-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.diff-file-title > svg { flex: none; }
+.diff-head-meta { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; flex: none; }
+.diff-mode-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--blue), transparent 55%);
+  color: var(--blue);
+  background: color-mix(in oklab, var(--blue), transparent 90%);
+  font: 500 0.8077rem/1.5 var(--font-mono);
+  white-space: nowrap;
+}
+.diff-mode-badge.staged {
+  border-color: color-mix(in oklab, var(--green), transparent 50%);
+  color: var(--green);
+  background: color-mix(in oklab, var(--green), transparent 90%);
+}
+.diff-mode-badge.untracked,
+.diff-mode-badge.stash {
+  border-color: color-mix(in oklab, var(--orange), transparent 50%);
+  color: var(--orange);
+  background: color-mix(in oklab, var(--orange), transparent 90%);
+}
+.diff-head-churn { display: inline-flex; gap: 7px; font-size: 0.8462rem; }
+.diff-head-churn .add { color: var(--green); font-style: normal; }
+.diff-head-churn .del { color: var(--red); font-style: normal; }
+.diff-view-actions { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+.diff-layout-toggle .tool-btn { min-width: 24px; justify-content: center; }
+.diff-open-file { white-space: nowrap; }
+/* the reader sits on the themed editor surface, same as the graph */
+.diff-view-scroll { position: relative; min-height: 0; overflow: auto; padding: 0 0 28px; background: var(--editor-bg); }
+/* wrap toggle in the head — same accent treatment as the panel toggles */
+.diff-view-head .tool-btn.active {
+  color: var(--blue);
+  background: color-mix(in oklab, var(--blue), transparent 88%);
+}
+
+/* ---------------- repo view / graph ---------------- */
+
+/* flex, not grid rows: merge / rebase / cherry-pick banners stack above the graph
+   and any combination of them can be visible at once */
+.repo-view.active { display: flex; flex-direction: column; }
+.repo-view > .graph-pane { flex: 1; min-height: 0; }
+
+.merge-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  background: color-mix(in oklab, var(--orange), transparent 88%);
+}
+.merge-banner > svg { color: var(--orange); }
+.merge-banner span { color: var(--text-2); font-size: 0.9231rem; }
+.merge-banner-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.graph-pane {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  outline: 0;
+  position: relative; /* hosts .section-veil */
+}
+
+.graph-scope-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pane);
+  color: var(--text-3);
+  font-size: 0.8462rem;
+}
+.graph-scope-bar > span { margin-right: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.graph-scope-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.graph-scope-bar button:hover,
+.graph-scope-bar button.active { border-color: color-mix(in oklab, var(--blue), transparent 45%); color: var(--text); background: color-mix(in oklab, var(--blue), transparent 90%); }
+
+/* ⌘F search — replaces the icon button in place, grows to fill the bar */
+.graph-scope-bar > span.graph-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  max-width: 420px;
+  margin-right: 0;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in oklab, var(--blue), transparent 55%);
+  border-radius: 7px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.graph-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.graph-search-count { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.graph-search button { min-height: 18px; padding: 0 4px; border: 0; }
+
+.inspector-scroll { position: relative; /* hosts .section-veil */ }
+
+/* right dock header — same shape as redis_min / elastic_min, MiniTabs sit under it */
+.inspector-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+}
+.doc-title { min-width: 0; }
+.doc-title strong { display: block; color: var(--text); font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-title span { display: block; color: var(--text-3); font: 11px var(--font-mono); }
+
+.graph-table {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--editor-bg);
+  position: relative; /* hosts .graph-pin-bar */
+}
+
+/* floating control while a branch line is pinned — filter / clear */
+.graph-pin-bar {
+  position: absolute;
+  top: 34px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--glass);
+  backdrop-filter: blur(6px);
+  color: var(--text-3);
+  font-size: 0.8462rem;
+  box-shadow: var(--shadow);
+}
+.graph-pin-bar button {
+  min-height: 20px;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.graph-pin-bar button:hover { color: var(--text); border-color: color-mix(in oklab, var(--blue), transparent 45%); }
+.graph-pin-bar button.active {
+  color: var(--blue);
+  border-color: color-mix(in oklab, var(--blue), transparent 45%);
+  background: color-mix(in oklab, var(--blue), transparent 88%);
+}
+
+.graph-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  padding: 0 12px 0 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--pane-2);
+  color: var(--text-3);
+  font-size: 0.8462rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.graph-head .graph-gutter { overflow: hidden; text-overflow: ellipsis; }
+.graph-head .graph-hash { font-family: var(--font-body); }
+
+.graph-scroll {
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  background: var(--editor-bg);
+}
+
+.graph-canvas { position: relative; min-width: 100%; }
+
+.graph-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding: 0 12px 0 8px;
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in oklab, var(--line), transparent 55%);
+  white-space: nowrap;
+}
+.graph-row:hover { background: color-mix(in oklab, var(--blue), transparent 93%); }
+/* ⌘F hit — tint in place; .selected below wins when both apply */
+.graph-row.search-hit {
+  background: color-mix(in oklab, var(--orange), transparent 90%);
+  box-shadow: inset 2px 0 0 var(--orange);
+}
+.graph-row.selected { background: color-mix(in oklab, var(--blue), transparent 86%); }
+
+.graph-gutter { flex: none; display: flex; align-items: center; overflow: hidden; }
+.graph-gutter.clickable { cursor: pointer; }
+.graph-rails { display: block; }
+.graph-rails line, .graph-rails path { stroke-width: 1.6; }
+.graph-dot { stroke: var(--editor-bg); stroke-width: 1.5; }
+
+.graph-subject {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+.subject-text { overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.graph-row.selected .subject-text { color: var(--text); }
+
+.graph-author { flex: none; width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 0.9231rem; }
+.graph-hash { flex: none; width: 68px; color: var(--blue); font: 0.9231rem/1 var(--font-mono); }
+.graph-time { flex: none; width: 48px; text-align: right; color: var(--text-2); font-size: 0.9231rem; }
+.graph-row:hover .graph-author,
+.graph-row:hover .graph-time,
+.graph-row.selected .graph-author,
+.graph-row.selected .graph-time { color: var(--text); }
+
+.graph-load-more {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+  font-size: 0.9231rem;
+}
+.graph-load-more:hover { background: color-mix(in oklab, var(--blue), transparent 92%); }
+
+.ref-chip {
+  flex: none;
+  /* branch names stay readable — only absurdly long refs get clipped */
+  max-width: 100ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--blue), transparent 55%);
+  color: var(--blue);
+  background: color-mix(in oklab, var(--blue), transparent 90%);
+  font: 0.8077rem/1.5 var(--font-mono);
+}
+.ref-chip.head {
+  border-color: color-mix(in oklab, var(--green), transparent 40%);
+  color: var(--green);
+  background: color-mix(in oklab, var(--green), transparent 88%);
+  font-weight: 600;
+}
+.ref-chip.remote {
+  border-color: color-mix(in oklab, var(--text-3), transparent 55%);
+  color: var(--text-2);
+  background: color-mix(in oklab, var(--text-3), transparent 92%);
+}
+.ref-chip.tag {
+  border-color: color-mix(in oklab, var(--orange), transparent 50%);
+  color: var(--orange);
+  background: color-mix(in oklab, var(--orange), transparent 90%);
+}
+
+/* branch-line highlight — hovering a row, or pinning a ref chip, lights up the
+   rail segments of that line and fades the rest of the graph. Rows keep their
+   text at full strength: only the drawn path changes. */
+.graph-rails .hot { stroke-width: 3; }
+.graph-rails .dim { opacity: 0.16; }
+circle.graph-dot.hot { r: 5; stroke-width: 1.5; } /* keep the dot's outline thin */
+circle.graph-dot.dim { opacity: 0.16; }
+
+.ref-chip { appearance: none; cursor: pointer; }
+.ref-chip:hover { filter: brightness(1.2); }
+.ref-chip.pinned { box-shadow: 0 0 0 2px color-mix(in oklab, currentColor, transparent 55%); }
+
+body.compact .graph-row { height: 24px; }
+
+/* ---------------- titlebar signals ---------------- */
+
+/* toolbar buttons carry a count bubble so "needs pull / needs push / uncommitted"
+   is visible without reading the statusbar */
+.tb-signal { position: relative; display: inline-flex; }
+.tb-count {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--window);
+  color: var(--window);
+  font: 600 0.6923rem/1 var(--font-mono);
+  pointer-events: none;
+}
+.tb-signal.ahead .tb-count { background: var(--green); }
+.tb-signal.behind .tb-count { background: var(--orange); }
+.tb-signal.dirty .tb-count { background: var(--blue); }
+
+.tb-signal.on .tool-btn:not(:disabled) { color: var(--text); }
+.tb-signal.ahead.on .tool-btn:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--green), transparent 45%); }
+.tb-signal.behind.on .tool-btn:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--orange), transparent 45%); }
+.tb-signal.dirty.on .tool-btn:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--blue), transparent 45%); }
+
+/* ---------------- sidebar: changes & branches ---------------- */
+
+/* commit composer pinned under the inspector's Changes tab */
+.commit-footer {
+  padding: 8px 8px 6px;
+  border-top: 1px solid var(--line);
+  background: var(--pane);
+}
+.commit-footer .commit-box { margin: 0; }
+.commit-footer .commit-message { min-height: 58px; max-height: 240px; }
+
+/* focus ring for the vim h/l panel cycle */
+.group.panel-focused .group-title > span:first-child { color: var(--blue); }
+.working-tree.panel-focused {
+  box-shadow: inset 2px 0 0 var(--blue);
+  background: color-mix(in oklab, var(--blue), transparent 96%);
+}
+.working-tree.panel-focused .working-tree-title > span:first-child { color: var(--blue); }
+.graph-pane.panel-focused { box-shadow: inset 2px 0 0 var(--blue); }
+.inspector.panel-focused { box-shadow: inset 2px 0 0 var(--blue); }
+
+.working-tree { margin: 0 -4px; padding: 0 4px; }
+.working-tree-title { padding-top: 2px; }
+/* toggle icon + count sat glued together and baseline-misaligned — give them air.
+   Applies to both list headers that carry the tree/flat toggle: Working Tree and
+   the commit-detail Files header. */
+.working-tree-title > span:last-child,
+.commit-detail > .group-title > span:last-child { display: inline-flex; align-items: center; gap: 7px; }
+
+.group-action {
+  display: inline-grid;
+  place-items: center;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.group-action:hover { color: var(--text); }
+
+.change-section {
+  margin: 14px 4px 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 0.8462rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* first section sits right under the panel title — no divider needed there */
+.working-tree-title + .change-section { margin-top: 6px; padding-top: 0; border-top: 0; }
+.change-section.conflict-head { color: var(--orange); }
+
+.change-row {
+  position: relative;
+  grid-template-columns: 14px 15px minmax(0, 1fr) auto auto;
+  gap: 6px;
+}
+.change-row.nested { margin-left: 14px; }
+.change-file-icon { color: var(--text-3); }
+/* design-systems/layout.css hides .index-item/.nav-item/.group-title/.empty-note
+   spans globally when the LEFT dock collapses — that rule was meant for the
+   sidebar icon rail, but the same classes are used by the right-dock rows
+   (WorkingTree, commit-detail Files list). Restore each element's designed
+   display value here. NOT `display: revert` — revert rolls back to the UA
+   default and also cancels app rules (the flex .group-title, the hover-only
+   .change-actions), which is exactly what made the inspector render
+   differently while the left dock was collapsed. */
+body.left-collapsed .inspector .group-title { display: flex; }
+body.left-collapsed .inspector .empty-note { display: block; }
+body.left-collapsed .inspector .index-item,
+body.left-collapsed .inspector .nav-item { display: grid; padding: 0 8px; }
+body.left-collapsed .inspector .index-item > span:not(:first-child),
+body.left-collapsed .inspector .nav-item > span:not(:first-child),
+body.left-collapsed .inspector .nav-item > .badge { display: inline; }
+body.left-collapsed .inspector .index-item > span.change-path { display: flex; }
+body.left-collapsed .inspector .index-item > span.change-stats,
+body.left-collapsed .inspector .index-item > span.diff-stat { display: inline-flex; }
+body.left-collapsed .inspector .index-item > span.change-actions { display: none; }
+body.left-collapsed .inspector .change-row:hover > span.change-actions,
+body.left-collapsed .inspector .change-row:focus-within > span.change-actions,
+body.left-collapsed .inspector .change-row.conflict > span.change-actions { display: inline-flex; }
+.change-file-icon.lang-js { color: #f7df1e !important; }
+.change-file-icon.lang-ts { color: #3178c6 !important; }
+.change-file-icon.lang-java { color: #f89820 !important; }
+.change-file-icon.lang-go { color: #00add8 !important; }
+.change-file-icon.lang-python { color: #4584b6 !important; }
+.change-file-icon.lang-rust { color: #dea584 !important; }
+.change-file-icon.lang-swift { color: #ffac45 !important; }
+.change-file-icon.lang-kotlin { color: #a97bff !important; }
+.change-file-icon.lang-ruby { color: #cc342d !important; }
+.change-file-icon.lang-php { color: #777bb4 !important; }
+.change-file-icon.lang-vue { color: #42b883 !important; }
+.change-file-icon.lang-svelte { color: #ff3e00 !important; }
+.change-file-icon.lang-html { color: #e34c26 !important; }
+.change-file-icon.lang-css { color: #264de4 !important; }
+.change-file-icon.lang-scss { color: #cc6699 !important; }
+.change-file-icon.lang-less { color: #1d365d !important; }
+.change-file-icon.lang-c { color: #555555 !important; }
+.change-file-icon.lang-cpp { color: #f34b7d !important; }
+.change-file-icon.lang-sql { color: #a5a5a5 !important; }
+/* dir + base as separate spans: the dir dims and truncates first, the filename
+   survives — and leading dots render correctly (the old rtl trick flipped them) */
+.change-path {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+.change-path .change-dir {
+  flex: 0 999 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-3);
+}
+.change-path .change-base {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.change-row.conflict .change-path { color: var(--orange); }
+
+.change-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  margin-top: 2px;
+  padding: 0 8px;
+  color: var(--text-3);
+}
+.change-folder svg { flex: none; }
+.change-folder-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8462rem; }
+.change-folder-count { margin-left: auto; font: 0.8077rem/1 var(--font-mono); }
+
+.change-code {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font: 600 0.8462rem/1 var(--font-mono);
+  color: var(--text-3);
+}
+.code-M { color: var(--orange); }
+.code-A, .code-\? { color: var(--green); }
+.code-D { color: var(--red); }
+.code-R, .code-C { color: var(--blue); }
+.code-U { color: var(--orange); }
+
+.change-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font: 0.8077rem/1 var(--font-mono);
+  color: var(--text-3);
+}
+.change-stats .stat-add { color: var(--green); }
+.change-stats .stat-del { color: var(--red); }
+.change-stats .stat-binary { color: var(--text-3); font-style: italic; }
+.change-actions { display: none; flex: none; gap: 2px; }
+.change-row:hover .change-actions,
+.change-row:focus-within .change-actions,
+.change-row.conflict .change-actions,
+.stashes-group .change-actions { display: inline-flex; }
+.change-actions button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-2);
+  font: 600 0.8462rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.change-actions button:hover { background: color-mix(in oklab, var(--blue), transparent 80%); color: var(--text); }
+
+.section-view-all,
+.view-all {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font: 500 0.8077rem/1.2 var(--font-body);
+  cursor: pointer;
+}
+.section-view-all { width: 100%; padding: 5px 8px; text-align: left; }
+.section-view-all:hover,
+.view-all:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+
+.commit-box {
+  display: grid;
+  gap: 8px;
+  margin: 10px 4px 4px;
+}
+.commit-message {
+  min-height: 64px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--editor-bg);
+  color: var(--text);
+  font: inherit;
+}
+.commit-message:focus { outline: 0; border-color: var(--accent-focus); }
+
+.commit-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.commit-footer .commit-actions { gap: 6px; }
+.commit-footer .commit-actions .tool-btn:not(.icon-only) { padding-inline: 8px; }
+.amend-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-3);
+  font-size: 0.8462rem;
+  cursor: pointer;
+  user-select: none;
+}
+.amend-toggle input { accent-color: var(--blue); }
+
+/* commit-subject length: quiet until it crosses 50, red past 72 */
+.subject-count {
+  margin-right: auto;
+  color: var(--text-3);
+  font: 0.8077rem/1 var(--font-mono);
+}
+.subject-count.warn { color: var(--orange); }
+.subject-count.over { color: var(--red); }
+
+.branch-row .branch-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-row .branch-name.current { color: var(--green); font-weight: 600; }
+
+.track-badge {
+  flex: none;
+  font: 0.8077rem/1 var(--font-mono);
+  color: var(--text-3);
+}
+.track-badge.ahead { color: var(--green); }
+.track-badge.behind { color: var(--orange); }
+
+.group-title.sub { margin-top: 10px; cursor: pointer; }
+
+.fork-point {
+  margin: 2px 6px 6px;
+  padding: 5px 8px;
+  border-left: 2px solid color-mix(in oklab, var(--blue), transparent 40%);
+  color: var(--text-3);
+  font-size: 0.8462rem;
+}
+.fork-point strong { color: var(--blue); font-weight: 600; }
+
+/* repo rows are standard single-line design-system .nav-item rows — hover/active
+   states come from the shared component styles, branch lives in the tooltip */
+.repo-list { display: grid; gap: 2px; }
+.repo-row .repo-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.repo-track { display: flex; gap: 4px; }
+.track-badge.dirty { color: var(--blue); }
+
+.context-item.danger, .context-item.danger:hover { color: var(--red); }
+.context-item.danger svg { color: var(--red); }
+
+/* ---------------- inspector: commit detail & diff ---------------- */
+
+.commit-detail { display: grid; gap: 10px; align-content: start; }
+
+/* lineage: a one-rail diagram of where this commit's line came from and landed */
+.lineage { display: grid; margin: 0 0 10px; padding: 8px 12px 8px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--pane-2); }
+/* every dot and the rail share one axis at x = 14px, so sizes can differ per
+   step without knocking the column out of line */
+.lineage-step { position: relative; display: flex; align-items: center; padding: 4px 0 4px 28px; font-size: 0.9231rem; }
+.lineage-step::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px; background: var(--line-2); }
+.lineage-step:first-child::before { top: 50%; }
+.lineage-step:last-child::before { bottom: 50%; }
+.lineage-dot { position: absolute; left: 14px; top: 50%; transform: translate(-50%, -50%); width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.lineage-step.self .lineage-dot { background: var(--blue); box-shadow: 0 0 0 3px color-mix(in oklab, var(--blue), transparent 75%); }
+.lineage-step.into .lineage-dot { background: var(--green); }
+.lineage-step.open .lineage-dot { background: transparent; border: 2px dashed var(--text-3); width: 10px; height: 10px; }
+
+.commit-meta { display: grid; gap: 2px; }
+.commit-meta .muted { color: var(--text-3); font-size: 0.9231rem; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--text-3); }
+
+.commit-message-full {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--editor-bg);
+  color: var(--text);
+  font: 0.9231rem/1.55 var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+/* commit-detail Files rows mirror the Working Tree rows (.change-row), minus the
+   status-code column: fixed 15px icon track so the icon can't squash, and the
+   same 14px indent when grouped under a folder header. */
+.file-row { grid-template-columns: 15px minmax(0, 1fr) auto; gap: 6px; }
+.file-row.nested { margin-left: 14px; }
+.diff-stat { font: 0.8462rem/1 var(--font-mono); }
+.diff-stat .add { color: var(--green); font-style: normal; }
+.diff-stat .del { color: var(--red); font-style: normal; }
+
+.diff-body {
+  display: block;
+  min-width: 100%;
+  margin: 0;
+  color: var(--editor-fg);
+  font: 0.8846rem/1.65 var(--font-mono);
+  user-select: text;
+}
+.diff-hunk { display: block; min-width: 100%; }
+.diff-hunk + .diff-hunk { margin-top: 12px; }
+.diff-hunk-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: max-content;
+  min-height: 30px;
+  padding: 4px 10px 4px 12px;
+  border-block: 1px solid color-mix(in oklab, var(--line), transparent 20%);
+  color: var(--blue);
+  background: color-mix(in oklab, var(--editor-bg), var(--blue) 8%);
+  box-shadow: 0 4px 10px color-mix(in oklab, var(--editor-bg), transparent 15%);
+  font-size: 0.8077rem;
+}
+.diff-hunk:first-child .diff-hunk-head { border-top: 0; }
+.hunk-action {
+  flex: none;
+  min-height: 22px;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in oklab, var(--blue), transparent 55%);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--editor-bg), transparent 10%);
+  color: var(--blue);
+  font: 0.8077rem/1.6 var(--font-body);
+  cursor: pointer;
+}
+.hunk-action:hover { background: color-mix(in oklab, var(--blue), transparent 88%); }
+.hunk-action:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+.diff-line {
+  display: grid;
+  grid-template-columns: 5.5ch 5.5ch 2.5ch minmax(max-content, 1fr);
+  min-width: max-content;
+  min-height: 23px;
+  white-space: pre;
+}
+.diff-split { min-width: max(100%, 920px); }
+.diff-split-labels,
+.diff-split-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.diff-split-labels {
+  position: sticky;
+  top: 30px;
+  z-index: 4;
+  min-width: 920px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in oklab, var(--pane), transparent 3%);
+  color: var(--text-3);
+  font: 600 0.7308rem/24px var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.diff-split-labels span { padding-left: 11px; }
+.diff-split-labels span + span { border-left: 1px solid var(--line-2); }
+.diff-cell {
+  display: grid;
+  grid-template-columns: 5.5ch 2.5ch minmax(max-content, 1fr);
+  min-width: 0;
+  min-height: 23px;
+  white-space: pre;
+}
+.diff-cell.new { border-left: 1px solid var(--line-2); }
+.diff-cell.empty { background: color-mix(in oklab, var(--pane-2), transparent 68%); }
+.diff-line.add, .diff-cell.add {
+  background: color-mix(in oklab, var(--green), transparent 95%);
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--green), transparent 35%);
+}
+.diff-line.delete, .diff-cell.delete {
+  background: color-mix(in oklab, var(--red), transparent 95%);
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--red), transparent 38%);
+}
+.diff-gutter {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-height: 23px;
+  padding: 0 8px 0 5px;
+  border-right: 1px solid color-mix(in oklab, var(--line), transparent 38%);
+  background: color-mix(in oklab, var(--pane), transparent 35%);
+  color: color-mix(in oklab, var(--text-3), transparent 8%);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.diff-marker { display: inline-flex; justify-content: center; font-style: normal; user-select: none; }
+.diff-line.add .diff-marker, .diff-cell.add .diff-marker { color: var(--green); font-weight: 700; }
+.diff-line.delete .diff-marker, .diff-cell.delete .diff-marker { color: var(--red); font-weight: 700; }
+.diff-code { display: block; min-width: 0; padding: 0 10px 0 6px; color: var(--editor-fg); font: inherit; }
+.diff-body.wrap .diff-line { grid-template-columns: 5.5ch 5.5ch 2.5ch minmax(0, 1fr); min-width: 0; }
+.diff-body.wrap .diff-cell { grid-template-columns: 5.5ch 2.5ch minmax(0, 1fr); }
+.diff-body.wrap .diff-code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff-split.wrap { min-width: 100%; }
+
+/* blame view */
+.blame-line { display: grid; grid-template-columns: 24ch 5.5ch minmax(max-content, 1fr); position: relative; white-space: pre; min-width: max-content; cursor: pointer; }
+.blame-line.group-start { border-top: 1px solid color-mix(in oklab, var(--line), transparent 50%); }
+.blame-line.same-commit { background: color-mix(in oklab, var(--blue), transparent 95%); }
+.blame-line.selected {
+  background: color-mix(in oklab, var(--blue), transparent 84%);
+  box-shadow: inset 3px 0 0 var(--blue), inset 0 1px 0 color-mix(in oklab, var(--blue), transparent 60%), inset 0 -1px 0 color-mix(in oklab, var(--blue), transparent 60%);
+}
+.blame-line:focus-visible { outline: 1px solid var(--blue); outline-offset: -2px; }
+.blame-meta {
+  flex: none;
+  width: 24ch;
+  overflow: hidden;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.blame-meta:hover { color: var(--blue); }
+.blame-body.wrap .blame-line { grid-template-columns: 24ch 5.5ch minmax(0, 1fr); min-width: 0; }
+.blame-selection-bar {
+  position: sticky;
+  top: -8px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line-2);
+  background: color-mix(in oklab, var(--editor-bg), transparent 4%);
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--surface-app), transparent 82%);
+}
+.blame-selection-label { display: grid; min-width: 0; gap: 2px; }
+.blame-selection-label > span { overflow: hidden; color: var(--text-3); font-size: 0.8077rem; text-overflow: ellipsis; white-space: nowrap; }
+.blame-selection-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.blame-selection-actions .tool-btn { min-height: 26px; }
+
+/* ---------------- inspector: changes & actions tabs ---------------- */
+
+.changes-tab, .actions-tab { display: grid; align-content: start; gap: 2px; padding: 8px 6px; }
+.actions-tab { gap: 4px; container-type: inline-size; }
+
+.change-section.with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.action-grid .tool-btn { justify-content: flex-start; width: 100%; }
+.action-strip { display: flex; flex-wrap: nowrap; gap: 5px; margin: 2px 2px 8px; }
+.action-strip .tool-btn { flex: 1; justify-content: center; min-width: 0; min-height: 26px; padding: 4px 7px; white-space: normal; }
+.context-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.context-actions .tool-btn { width: 100%; min-height: 32px; justify-content: flex-start; white-space: nowrap; }
+.context-actions .tool-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.actions-tab > .group-title > span:last-child { min-width: 0; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container (max-width: 360px) {
+  .context-actions { grid-template-columns: minmax(0, 1fr); }
+  .context-actions .tool-btn:last-child:nth-child(odd) { grid-column: auto; }
+}
+
+.remote-list { display: grid; gap: 3px; margin: 2px 2px 8px; }
+.remote-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 3px 5px;
+  border-radius: 6px;
+  cursor: default;
+}
+.remote-row:hover { background: var(--pane-2); }
+.remote-name { flex: none; font: 0.8462rem/1 var(--font-mono); min-width: 56px; }
+.remote-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-3); }
+.remote-actions { flex: none; display: flex; gap: 2px; }
+.remote-actions .tool-btn { width: 22px; height: 22px; padding: 0; justify-content: center; }
+
+.git-resource-previews {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.resource-preview { min-width: 0; }
+.resource-section-title { margin-top: 0; }
+.resource-title-actions { display: inline-flex; align-items: center; gap: 6px; }
+.resource-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 3px 5px;
+  border-radius: 6px;
+  color: var(--text-2);
+  outline: 0;
+}
+.resource-row:hover,
+.resource-row.active { background: color-mix(in oklab, var(--blue), transparent 90%); color: var(--text); }
+.resource-row:focus-visible { box-shadow: inset 0 0 0 1px var(--accent-focus); }
+.resource-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resource-label.file { display: flex; align-items: center; gap: 6px; }
+.resource-label.current { color: var(--green); font-weight: 600; }
+.resource-meta { display: inline-flex; gap: 3px; flex: none; color: var(--text-3); font: 0.8077rem/1 var(--font-mono); }
+.resource-actions { display: inline-flex; align-items: center; gap: 2px; flex: none; }
+.resource-actions button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  font: 600 0.7692rem/1 var(--font-mono);
+  cursor: pointer;
+}
+.resource-actions button:hover { background: color-mix(in oklab, var(--blue), transparent 82%); color: var(--text); }
+/* max-content, not a fixed min-width: a grid item defaults to min-width:auto and
+   will not shrink below its buttons — overriding it made apply/pop/drop overlap */
+.stash-resource-row .resource-actions { min-width: max-content; justify-content: flex-end; }
+.empty-note.compact { padding-block: 5px; }
+
+.git-resource-view.active { min-height: 0; display: grid; }
+.resource-manager { min-height: 0; display: grid; grid-template-rows: auto 1fr; }
+.resource-manager-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.resource-manager-head > div { min-width: 150px; margin-right: auto; }
+.resource-manager-head strong,
+.resource-manager-head span { display: block; }
+.resource-manager-head span { margin-top: 2px; color: var(--text-3); font-size: 0.8462rem; }
+.resource-manager-head input {
+  width: min(280px, 32vw);
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-2);
+  border-radius: 7px;
+  background: var(--editor-bg);
+  color: var(--text);
+  font: inherit;
+}
+.resource-manager-head input:focus { outline: 1px solid var(--accent-focus); }
+.resource-manager-list { min-height: 0; overflow: auto; padding: 8px; }
+.resource-manager-list .resource-row { min-height: 34px; padding-inline: 8px; border-bottom: 1px solid color-mix(in oklab, var(--line), transparent 45%); border-radius: 0; }
+.resource-empty { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 180px; color: var(--text-3); }
+
+@keyframes gitmin-spin { to { transform: rotate(360deg); } }
+.spin { animation: gitmin-spin 1s linear infinite; }
+.tab-dirty { color: var(--orange); font-style: normal; }
+.context-item:focus-visible { outline: 1px solid var(--accent-focus); background: color-mix(in oklab, var(--blue), transparent 84%); }
+
+/* ---------------- Tree-sitter syntax tokens ---------------- */
+
+.tok-kw { color: var(--syntax-key); font-weight: 550; }
+.tok-str { color: var(--syntax-string); }
+.tok-num { color: var(--syntax-number); }
+.tok-bool { color: var(--syntax-boolean); }
+.tok-null { color: var(--syntax-null); }
+.tok-op { color: var(--syntax-operator); }
+.tok-punc { color: var(--syntax-punctuation); }
+.tok-com { color: var(--syntax-comment); font-style: italic; }
+.tok-typ { color: var(--syntax-type); }
+.tok-fn { color: var(--syntax-function); }
+.tok-prop { color: var(--syntax-property); }
+.tok-var { color: var(--syntax-variable); }
+.tok-param { color: var(--syntax-parameter); font-style: italic; }
+.tok-const { color: var(--syntax-constant); }
+.tok-tag { color: var(--syntax-tag); }
+
+@container (max-width: 920px) {
+  .diff-view-head { align-items: flex-start; flex-wrap: wrap; }
+  .diff-view-actions { width: 100%; justify-content: flex-end; }
+  .diff-head-meta { margin-left: auto; }
+}
+
+@container (max-width: 620px) {
+  .diff-open-file { margin-right: auto; }
+  .diff-file-title .doc-title > span { display: none; }
+  .diff-head-meta { display: none; }
+}
+
+/* ---------------- welcome / repos manager ---------------- */
+
+.welcome-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.welcome-toolbar-actions { display: inline-flex; align-items: center; gap: 6px; }
+/* the repo finder moved off the left dock onto Welcome */
+.welcome-filter { width: 240px; }
+/* …so the dock has no header row left to subtract */
+.sidebar .side-scroll { height: 100%; }
+
+.welcome-shell {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: min-content;
+  gap: 14px;
+  padding: 22px;
+  align-content: start;
+}
+.welcome-view { overflow: auto; }
+
+.welcome-hero, .scan-panel {
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--pane), transparent 4%);
+  box-shadow: var(--shadow);
+}
+
+.welcome-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 30px;
+  display: grid;
+  align-content: center;
+}
+.welcome-hero:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--blue), transparent 88%), transparent 42%),
+    linear-gradient(315deg, color-mix(in oklab, var(--accent), transparent 88%), transparent 48%);
+  pointer-events: none;
+}
+.welcome-copy, .welcome-actions { position: relative; z-index: 1; }
+.welcome-kicker {
+  color: var(--blue);
+  font: 0.9231rem/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.welcome-title {
+  margin: 12px 0 10px;
+  max-width: 560px;
+  color: var(--text);
+  font-size: 2.3077rem;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+.welcome-text {
+  max-width: 620px;
+  color: var(--text-2);
+  font-size: 1.0769rem;
+  line-height: 1.7;
+}
+.welcome-actions { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+
+.welcome-launch {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.welcome-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: center;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--pane), transparent 4%);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+.welcome-card:hover {
+  border-color: color-mix(in oklab, var(--blue), transparent 45%);
+  background: var(--pane-2);
+  transform: translateY(-1px);
+}
+.welcome-card.active { border-color: var(--accent-focus); }
+.welcome-card-icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: var(--blue);
+  background: color-mix(in oklab, var(--blue), transparent 86%);
+}
+.welcome-card strong {
+  color: var(--text);
+  font-size: 1.0769rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  min-width: 0;
+}
+.welcome-card-desc {
+  color: var(--text-3);
+  font-size: 0.8462rem;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  min-width: 0;
+}
+
+.welcome-card-stats {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font: 0.8462rem/1.4 var(--font-mono);
+  min-width: 0;
+}
+.card-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.card-track { margin-left: auto; display: flex; gap: 4px; }
+
+.welcome-list { display: grid; gap: 2px; }
+.welcome-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--pane), transparent 4%);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.welcome-list-row:hover {
+  border-color: color-mix(in oklab, var(--blue), transparent 65%);
+  background: var(--pane-2);
+}
+.welcome-list-row.active {
+  border-color: color-mix(in oklab, var(--green), transparent 50%);
+  background: color-mix(in oklab, var(--green), transparent 90%);
+}
+.welcome-list-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.welcome-list-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+}
+.welcome-list-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+  font: 0.8462rem/1.3 var(--font-mono);
+  direction: rtl;
+  text-align: left;
+}
+.welcome-list-branch {
+  flex: none;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+  font: 0.8462rem/1.3 var(--font-mono);
+}
+.welcome-list-stats {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 0.8462rem/1 var(--font-mono);
+}
+
+.scan-panel { padding: 14px 16px; display: grid; gap: 8px; }
+.scan-list { display: grid; max-height: 320px; overflow: auto; }
+.scan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.scan-row:hover { background: color-mix(in oklab, var(--blue), transparent 93%); }
+.scan-row.known { opacity: 0.55; }
+.scan-row strong { flex: none; color: var(--text); }
+.scan-row .muted {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.8462rem;
+}
+.scan-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Shared prompt dialogs are CSS grids. Long unbroken paths otherwise contribute
+   their min-content width to the grid track and push the footer outside the box. */
+.prompt-dialog { grid-template-columns: minmax(0, 1fr); min-width: 0; max-height: calc(100vh - 32px); overflow: hidden; }
+.prompt-dialog > * { min-width: 0; }
+.prompt-dialog-msg { overflow-wrap: anywhere; word-break: break-word; max-height: min(50vh, 320px); overflow-y: auto; }
+.prompt-dialog-foot { min-width: 0; flex-wrap: wrap; }
+
+/* ---------------- keymap overlay ---------------- */
+
+.keymap-panel { max-width: 720px; padding: 16px 18px; display: grid; gap: 12px; }
+.keymap-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.keymap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 4px 24px;
+}
+.keymap-section .shortcut-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+
+.cmd-list .cmd { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; }
+.cmd-list .cmd.active, .cmd-list .cmd:hover { background: color-mix(in oklab, var(--blue), transparent 84%); }
+.cmd-group { padding: 8px 10px 3px; color: var(--text-3); font-size: 0.7692rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.cmd-copy { display: grid; min-width: 0; }
+.cmd-copy strong, .cmd-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-copy strong { color: inherit; font-weight: 500; }
+.cmd-copy small { color: var(--text-3); font-size: 0.7692rem; }
+
+/* narrow windows: layout.css drops the inspector, but the working tree lives
+   there now — keep the right dock and squeeze the repo sidebar instead */
+@media (max-width: 1180px) {
+  body:not(.left-collapsed):not(.right-collapsed):not(.inspector-unavailable) .main {
+    grid-template-columns: 200px minmax(460px, 1fr) minmax(280px, 30vw);
+  }
+  body:not(.left-collapsed):not(.right-collapsed):not(.inspector-unavailable) .inspector { display: grid; }
+  body:not(.left-collapsed):not(.right-collapsed):not(.inspector-unavailable) .resize-handle.right { display: block; }
+  .working-tree .change-actions button { padding-inline: 3px; }
+}
+
+/* Welcome multi-select — Finder semantics, so shift-drag must not paint text */
+.welcome-launch, .welcome-list { user-select: none; }
+.welcome-bulk { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: var(--text-2); font-size: 0.9231rem; }
+
+/* refs live in the left dock now — narrower than the inspector, so the row sheds
+   its metadata column and only reveals actions on hover */
+.sidebar .git-resource-previews { margin-top: 4px; }
+.sidebar .resource-row { grid-template-columns: 16px minmax(0, 1fr) auto; gap: 6px; padding: 2px 4px; }
+.sidebar .resource-meta { display: none; }
+.sidebar .resource-actions { opacity: 0; }
+.sidebar .resource-row:hover .resource-actions,
+.sidebar .resource-row:focus-within .resource-actions { opacity: 1; }
+body.left-collapsed .sidebar .git-resource-previews { display: none; }
+
+/* prompt-dialog pick list — inline and scrolling inside the dialog; the floating
+   .combobox-list would clip against the dialog bounds (rows reuse .combobox-item).
+   Height is fixed per dialog (inline style from the unfiltered option count) so
+   filtering never resizes the modal. Focusable: Tab moves here, j/k + ↑↓ navigate. */
+.dialog-options {
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--control-bg);
+}
+.dialog-options:focus { border-color: var(--control-focus-border); outline: none; }
+
+/* ---------------- cherry-pick clipboard (lazygit copied commits) ---------------- */
+.graph-row.picked { box-shadow: inset 2px 0 0 var(--purple); }
+
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+.pick-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--purple), transparent 90%);
+}
+.pick-hash { color: var(--purple); }
+.pick-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-size: 0.9231rem;
+}

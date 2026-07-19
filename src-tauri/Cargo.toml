@@ -1,0 +1,27 @@
+[package]
+name = "gitmin"
+version = "1.0.0-alpha"
+description = "Minimal git desktop client"
+edition = "2021"
+
+[lib]
+name = "gitmin_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-store = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+
+[profile.release]
+lto = true
+codegen-units = 1

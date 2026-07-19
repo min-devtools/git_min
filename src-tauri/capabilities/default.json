@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "store:default",
+    "clipboard-manager:allow-write-text",
+    "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://*", "app": true },
+        { "url": "http://*", "app": true }
+      ]
+    },
+    "opener:allow-open-path",
+    "dialog:allow-open"
+  ]
+}
