@@ -18,6 +18,8 @@ import { GitResourceView } from "./components/views/GitResourceView";
 import { inspectorAvailable, useApp } from "./store";
 import { themeBase } from "./lib/themes";
 import { applyPalette, clearAppliedPalette, readBuiltinPalette } from "./lib/themeContract";
+import { openRepository } from "./lib/actions";
+import { openSettingsWindow } from "./lib/openSettings";
 import type { TabDef } from "./lib/types";
 import { Icon } from "./ui/Icon";
 
@@ -31,6 +33,9 @@ function renderView(tab: TabDef, active: boolean) {
   }
 }
 
+// ponytail: settings window — when ?view=settings, render SettingsView alone (no titlebar/sidebar/etc). Native window owns chrome, T3.
+const isSettingsWindow = new URLSearchParams(window.location.search).get("view") === "settings";
+
 export default function App() {
   const {
     tabs, activeTabId, theme, compact, leftCollapsed, rightCollapsed,
@@ -40,7 +45,11 @@ export default function App() {
     leftCollapsed: s.leftCollapsed, rightCollapsed: s.rightCollapsed,
     toggleLeft: s.toggleLeft, toggleRight: s.toggleRight,
     setCommandOpen: s.setCommandOpen,
-  })));
+  }))) as {
+    tabs: TabDef[]; activeTabId: string; theme: string; compact: boolean;
+    leftCollapsed: boolean; rightCollapsed: boolean;
+    toggleLeft: () => void; toggleRight: () => void; setCommandOpen: (v: boolean) => void;
+  };
 
   const inspectorOk = useApp((s) => inspectorAvailable(s));
   const uiFont = useApp((s) => s.uiFont);
@@ -109,6 +118,11 @@ export default function App() {
         e.preventDefault();
         useApp.getState().openTab("welcome");
       }
+      // ⌘O — open a repository or folder via the native dialog
+      if (mod && key === "o") {
+        e.preventDefault();
+        void openRepository();
+      }
       if (mod && key === "b") {
         e.preventDefault();
         toggleLeft();
@@ -119,7 +133,7 @@ export default function App() {
       }
       if (mod && e.key === ",") {
         e.preventDefault();
-        useApp.getState().openTab("settings");
+        void openSettingsWindow("GitMin");
       }
       if (mod && key === "w") {
         e.preventDefault();
@@ -150,6 +164,21 @@ export default function App() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [setCommandOpen, toggleLeft, toggleRight]);
+
+  // ponytail: settings window — bare-minimum frame: theme + font setup already ran above. T3: native window owns chrome.
+  if (isSettingsWindow) {
+    return (
+      <div className="app-frame settings-window">
+        <main className="main">
+          <section className="workspace">
+            <SettingsView key="settings" active />
+          </section>
+        </main>
+        <Toast />
+        <Dialog />
+      </div>
+    );
+  }
 
   return (
     <div className="app-frame">

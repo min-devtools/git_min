@@ -238,9 +238,12 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
         case "n": void doCreateBranch(path); break;
         case "b":
         case "c": void doQuickCheckout(path); break;
+        // m works from any panel — the selected ref is what gets merged, and a
+        // silent no-op here just reads as a missing binding
         case "m":
-          if (ui.focusedPanel === "branches" && ui.selectedBranch && ui.selectedBranch !== currentBranch)
-            void doMerge(path, ui.selectedBranch);
+          if (!ui.selectedBranch) s.showToast("Merge", "Select a branch first (h focuses the refs dock).", "warn");
+          else if (ui.selectedBranch === currentBranch) s.showToast("Merge", `“${currentBranch}” is already the current branch.`, "warn");
+          else void doMerge(path, ui.selectedBranch);
           break;
         case "p": void doPull(path); break;
         case "P": void doPush(path); break;

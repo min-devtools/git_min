@@ -41,7 +41,8 @@ const SECTIONS: { title: string; rows: [string, string][] }[] = [
     title: "App",
     rows: [
       ["⌘K", "Command palette"],
-      ["⌘N", "Add repository"],
+      ["⌘N", "Add repository (Welcome)"],
+      ["⌘O", "Open repository / folder"],
       ["⌘↵", "Commit (in message box)"],
       ["⌘B / ⌘R", "Toggle panels"],
       ["⌘F", "Search commits · filter repos on Welcome"],

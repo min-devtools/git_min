@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { relatedLine, layoutGraph, type GraphRow } from "../lib/graphLayout";
 import { timeAgo, shortHash } from "../lib/format";
@@ -140,6 +140,10 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
   const picked = useMemo(() => new Set((pickedHashes ?? []).map((c) => c.hash)), [pickedHashes]);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewH, setViewH] = useState(600);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [subj, setSubj] = useState({ w: 0, view: 0 });
+  const [subjScroll, setSubjScroll] = useState(0);
   const [menu, setMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
   // nothing is highlighted until a ref chip is clicked; plain click replaces the
   // highlight (or clears it on the same chip), ⌘-click adds/removes extra lines
@@ -212,6 +216,26 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
     else if (top + ROW_H > el.scrollTop + el.clientHeight) el.scrollTop = top + ROW_H - el.clientHeight;
   }, [selected, byHash]);
 
+  // the Commit column scrolls as one unit: measure the widest rendered subject
+  // and the column viewport, then translate every row by the same offset
+  useLayoutEffect(() => {
+    const el = rowsRef.current;
+    if (!el) return;
+    let w = 0;
+    for (const c of el.querySelectorAll<HTMLElement>(".graph-subject-content")) w = Math.max(w, c.offsetWidth);
+    const view = el.querySelector<HTMLElement>(".graph-subject")?.clientWidth ?? 0;
+    setSubj((p) => (p.w === w && p.view === view ? p : { w, view }));
+  });
+
+  const maxSubj = Math.max(0, subj.w - subj.view);
+  const sx = Math.min(subjScroll, maxSubj);
+
+  // keep the scrollbar in step when the wheel drives the offset
+  useEffect(() => {
+    const bar = barRef.current;
+    if (bar && Math.abs(bar.scrollLeft - sx) > 0.5) bar.scrollLeft = sx;
+  }, [sx]);
+
   const start = Math.max(0, Math.floor(scrollTop / ROW_H) - 10);
   const end = Math.min(rows.length, Math.ceil((scrollTop + viewH) / ROW_H) + 10);
 
@@ -243,9 +267,14 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
         role="listbox"
         aria-label="Commit history"
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+        onWheel={(e) => {
+          // a sideways gesture pans the Commit column; vertical stays native
+          if (maxSubj > 0 && Math.abs(e.deltaX) > Math.abs(e.deltaY))
+            setSubjScroll(Math.max(0, Math.min(maxSubj, sx + e.deltaX)));
+        }}
       >
       <div className="graph-canvas" style={{ height: rows.length * ROW_H + (hasMore ? ROW_H : 0) }}>
-        <div style={{ transform: `translateY(${start * ROW_H}px)` }}>
+        <div ref={rowsRef} style={{ transform: `translateY(${start * ROW_H}px)` }}>
           {rows.slice(start, end).map((row, i) => {
             const c = visible[start + i];
             const pin = (additive: boolean) =>
@@ -290,7 +319,7 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
                   <RowRails row={row} line={onlyLine ? null : line} />
                 </span>
                 <span className="graph-subject">
-                  <span className="graph-subject-content">
+                  <span className="graph-subject-content" style={{ transform: `translateX(${-sx}px)` }}>
                     <RefChips
                       refs={c.refs}
                       pinned={pinned.includes(row.hash)}
@@ -320,6 +349,18 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
         )}
       </div>
       </div>
+      {maxSubj > 0 && (
+        <div className="graph-subject-bar" style={{ gridTemplateColumns: `${gutter}px minmax(0, 1fr) 120px 68px 48px` }}>
+          <span />
+          <div
+            ref={barRef}
+            className="graph-subject-track"
+            onScroll={(e) => setSubjScroll(e.currentTarget.scrollLeft)}
+          >
+            <div style={{ width: subj.w, height: 1 }} />
+          </div>
+        </div>
+      )}
       {menu && (
         <ContextMenu
           x={menu.x}

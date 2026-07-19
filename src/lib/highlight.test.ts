@@ -4,6 +4,9 @@ import { extOf, languageForExtension, tokenClassForNodeType } from "./highlight"
 assert.equal(languageForExtension("tsx"), "tsx");
 assert.equal(languageForExtension("mts"), "typescript");
 assert.equal(languageForExtension("rs"), "rust");
+assert.equal(languageForExtension("dockerfile"), "bash");
+assert.equal(languageForExtension("dockerfile-dev"), "bash");
+assert.equal(languageForExtension("gemfile"), "ruby");
 assert.equal(languageForExtension("unknown"), null);
 
 assert.equal(tokenClassForNodeType("comment", "// note"), "com");

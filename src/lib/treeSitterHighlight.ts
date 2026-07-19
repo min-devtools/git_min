@@ -12,6 +12,7 @@ import javascriptWasmUrl from "tree-sitter-wasms/out/tree-sitter-javascript.wasm
 import jsonWasmUrl from "tree-sitter-wasms/out/tree-sitter-json.wasm?url";
 import kotlinWasmUrl from "tree-sitter-wasms/out/tree-sitter-kotlin.wasm?url";
 import pythonWasmUrl from "tree-sitter-wasms/out/tree-sitter-python.wasm?url";
+import rubyWasmUrl from "tree-sitter-wasms/out/tree-sitter-ruby.wasm?url";
 import rustWasmUrl from "tree-sitter-wasms/out/tree-sitter-rust.wasm?url";
 import tomlWasmUrl from "tree-sitter-wasms/out/tree-sitter-toml.wasm?url";
 import tsxWasmUrl from "tree-sitter-wasms/out/tree-sitter-tsx.wasm?url";
@@ -26,7 +27,7 @@ const LANGUAGE_URLS: Record<TreeSitterLanguage, string> = {
   bash: bashWasmUrl, c: cWasmUrl, cpp: cppWasmUrl, c_sharp: csharpWasmUrl, css: cssWasmUrl,
   dart: dartWasmUrl, go: goWasmUrl, html: htmlWasmUrl, java: javaWasmUrl,
   javascript: javascriptWasmUrl, json: jsonWasmUrl, kotlin: kotlinWasmUrl, python: pythonWasmUrl,
-  rust: rustWasmUrl, toml: tomlWasmUrl, tsx: tsxWasmUrl, typescript: typescriptWasmUrl, yaml: yamlWasmUrl,
+  ruby: rubyWasmUrl, rust: rustWasmUrl, toml: tomlWasmUrl, tsx: tsxWasmUrl, typescript: typescriptWasmUrl, yaml: yamlWasmUrl,
 };
 
 type Span = { start: number; end: number; className: string };

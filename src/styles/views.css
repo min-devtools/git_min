@@ -125,7 +125,7 @@ body {
   background: transparent;
   color: var(--text-2);
   font: inherit;
-  cursor: pointer;
+  cursor: default;
 }
 .graph-scope-bar button:hover,
 .graph-scope-bar button.active { border-color: color-mix(in oklab, var(--blue), transparent 45%); color: var(--text); background: color-mix(in oklab, var(--blue), transparent 90%); }
@@ -176,7 +176,7 @@ body {
 .graph-table {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   background: var(--editor-bg);
   position: relative; /* hosts .graph-pin-bar */
 }
@@ -207,7 +207,7 @@ body {
   background: transparent;
   color: var(--text-2);
   font: inherit;
-  cursor: pointer;
+  cursor: default;
 }
 .graph-pin-bar button:hover { color: var(--text); border-color: color-mix(in oklab, var(--blue), transparent 45%); }
 .graph-pin-bar button.active {
@@ -250,7 +250,7 @@ body {
   gap: 10px;
   height: 28px;
   padding: 0 12px 0 8px;
-  cursor: pointer;
+  cursor: default;
   border-bottom: 1px solid color-mix(in oklab, var(--line), transparent 55%);
   white-space: nowrap;
 }
@@ -263,7 +263,7 @@ body {
 .graph-row.selected { background: color-mix(in oklab, var(--blue), transparent 86%); }
 
 .graph-gutter { flex: none; display: flex; align-items: center; overflow: hidden; }
-.graph-gutter.clickable { cursor: pointer; }
+.graph-gutter.clickable { cursor: default; }
 .graph-rails { display: block; }
 .graph-rails line, .graph-rails path { stroke-width: 1.6; }
 .graph-dot { stroke: var(--editor-bg); stroke-width: 1.5; }
@@ -271,7 +271,7 @@ body {
 .graph-subject {
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
+  overflow: hidden;
 }
 .graph-subject-content {
   width: max-content;
@@ -290,6 +290,29 @@ body {
 .graph-row.selected .graph-author,
 .graph-row.selected .graph-time { color: var(--text); }
 
+/* one shared horizontal scrollbar for the Commit column — every row's subject
+   is translated by the same offset, so the other columns never move */
+.graph-subject-bar {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 8px;
+  border-top: 1px solid var(--line);
+  background: var(--pane-2);
+}
+.graph-subject-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 11px;
+}
+.graph-subject-track::-webkit-scrollbar { height: 9px; }
+.graph-subject-track::-webkit-scrollbar-track { background: transparent; }
+.graph-subject-track::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 5px;
+}
+.graph-subject-track::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
 .graph-load-more {
   position: absolute;
   left: 0;
@@ -298,7 +321,7 @@ body {
   border: 0;
   background: transparent;
   color: var(--blue);
-  cursor: pointer;
+  cursor: default;
   font-size: 0.9231rem;
 }
 .graph-load-more:hover { background: color-mix(in oklab, var(--blue), transparent 92%); }
@@ -341,7 +364,7 @@ body {
 circle.graph-dot.hot { r: 5; stroke-width: 1.5; } /* keep the dot's outline thin */
 circle.graph-dot.dim { opacity: 0.16; }
 
-.ref-chip { appearance: none; cursor: pointer; }
+.ref-chip { appearance: none; cursor: default; }
 .ref-chip:hover { filter: brightness(1.2); }
 .ref-chip.pinned { box-shadow: 0 0 0 2px color-mix(in oklab, currentColor, transparent 55%); }
 
@@ -385,7 +408,7 @@ body.compact .graph-row { height: 24px; }
   background: var(--pane);
 }
 .commit-footer .commit-box { margin: 0; }
-.commit-footer .commit-message { min-height: 58px; max-height: 240px; }
+.commit-footer .commit-message { min-height: 128px; max-height: 240px; }
 
 /* focus ring for the vim h/l panel cycle */
 .group.panel-focused .group-title > span:first-child { color: var(--blue); }
@@ -412,7 +435,7 @@ body.compact .graph-row { height: 24px; }
   border: 0;
   background: transparent;
   color: var(--text-3);
-  cursor: pointer;
+  cursor: default;
 }
 .group-action:hover { color: var(--text); }
 
@@ -555,7 +578,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   background: transparent;
   color: var(--text-2);
   font: 600 0.8462rem/1 var(--font-mono);
-  cursor: pointer;
+  cursor: default;
 }
 .change-actions button:hover { background: color-mix(in oklab, var(--blue), transparent 80%); color: var(--text); }
 
@@ -565,7 +588,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   background: transparent;
   color: var(--blue);
   font: 500 0.8077rem/1.2 var(--font-body);
-  cursor: pointer;
+  cursor: default;
 }
 .section-view-all { width: 100%; padding: 5px 8px; text-align: left; }
 .section-view-all:hover,
@@ -577,7 +600,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   margin: 10px 4px 4px;
 }
 .commit-message {
-  min-height: 64px;
+  min-height: 128px;
   resize: vertical;
   padding: 8px 10px;
   border: 1px solid var(--line-2);
@@ -597,7 +620,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   gap: 5px;
   color: var(--text-3);
   font-size: 0.8462rem;
-  cursor: pointer;
+  cursor: default;
   user-select: none;
 }
 .amend-toggle input { accent-color: var(--blue); }
@@ -628,7 +651,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
 .track-badge.ahead { color: var(--green); }
 .track-badge.behind { color: var(--orange); }
 
-.group-title.sub { margin-top: 10px; cursor: pointer; }
+.group-title.sub { margin-top: 10px; cursor: default; }
 
 .fork-point {
   margin: 2px 6px 6px;
@@ -730,7 +753,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   background: color-mix(in oklab, var(--editor-bg), transparent 10%);
   color: var(--blue);
   font: 0.8077rem/1.6 var(--font-body);
-  cursor: pointer;
+  cursor: default;
 }
 .hunk-action:hover { background: color-mix(in oklab, var(--blue), transparent 88%); }
 .hunk-action:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
@@ -798,7 +821,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
 .diff-split.wrap { min-width: 100%; }
 
 /* blame view */
-.blame-line { display: grid; grid-template-columns: 24ch 5.5ch minmax(max-content, 1fr); position: relative; white-space: pre; min-width: max-content; cursor: pointer; }
+.blame-line { display: grid; grid-template-columns: 24ch 5.5ch minmax(max-content, 1fr); position: relative; white-space: pre; min-width: max-content; cursor: default; }
 .blame-line.group-start { border-top: 1px solid color-mix(in oklab, var(--line), transparent 50%); }
 .blame-line.same-commit { background: color-mix(in oklab, var(--blue), transparent 95%); }
 .blame-line.selected {
@@ -817,7 +840,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   color: var(--text-3);
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
 }
 .blame-meta:hover { color: var(--blue); }
 .blame-body.wrap .blame-line { grid-template-columns: 24ch 5.5ch minmax(0, 1fr); min-width: 0; }
@@ -920,7 +943,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   background: transparent;
   color: var(--text-3);
   font: 600 0.7692rem/1 var(--font-mono);
-  cursor: pointer;
+  cursor: default;
 }
 .resource-actions button:hover { background: color-mix(in oklab, var(--blue), transparent 82%); color: var(--text); }
 /* max-content, not a fixed min-width: a grid item defaults to min-width:auto and
@@ -1074,7 +1097,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   border: 1px solid var(--line-2);
   border-radius: 14px;
   background: color-mix(in oklab, var(--pane), transparent 4%);
-  cursor: pointer;
+  cursor: default;
   transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 .welcome-card:hover {
@@ -1148,7 +1171,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   color: var(--text);
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
 }
 .welcome-list-row:hover {
   border-color: color-mix(in oklab, var(--blue), transparent 65%);
@@ -1205,7 +1228,7 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   gap: 10px;
   padding: 5px 6px;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: default;
 }
 .scan-row:hover { background: color-mix(in oklab, var(--blue), transparent 93%); }
 .scan-row.known { opacity: 0.55; }

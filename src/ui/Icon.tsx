@@ -3,13 +3,21 @@ import cIcon from "material-icon-theme/icons/c.svg";
 import cppIcon from "material-icon-theme/icons/cpp.svg";
 import cssIcon from "material-icon-theme/icons/css.svg";
 import databaseIcon from "material-icon-theme/icons/database.svg";
+import dockerIcon from "material-icon-theme/icons/docker.svg";
+import editorconfigIcon from "material-icon-theme/icons/editorconfig.svg";
+import eslintIcon from "material-icon-theme/icons/eslint.svg";
+import gemfileIcon from "material-icon-theme/icons/gemfile.svg";
 import goIcon from "material-icon-theme/icons/go.svg";
+import gradleIcon from "material-icon-theme/icons/gradle.svg";
 import htmlIcon from "material-icon-theme/icons/html.svg";
 import javaIcon from "material-icon-theme/icons/java.svg";
 import javascriptIcon from "material-icon-theme/icons/javascript.svg";
 import kotlinIcon from "material-icon-theme/icons/kotlin.svg";
 import lessIcon from "material-icon-theme/icons/less.svg";
+import npmIcon from "material-icon-theme/icons/npm.svg";
 import phpIcon from "material-icon-theme/icons/php.svg";
+import pnpmIcon from "material-icon-theme/icons/pnpm.svg";
+import prettierIcon from "material-icon-theme/icons/prettier.svg";
 import pythonIcon from "material-icon-theme/icons/python.svg";
 import reactIcon from "material-icon-theme/icons/react.svg";
 import rubyIcon from "material-icon-theme/icons/ruby.svg";
@@ -19,6 +27,7 @@ import svelteIcon from "material-icon-theme/icons/svelte.svg";
 import swiftIcon from "material-icon-theme/icons/swift.svg";
 import typescriptIcon from "material-icon-theme/icons/typescript.svg";
 import vueIcon from "material-icon-theme/icons/vue.svg";
+import yarnIcon from "material-icon-theme/icons/yarn.svg";
 export { fileIcon, fileIconTone } from "../lib/fileIcons";
 import {
   Activity,
@@ -178,13 +187,21 @@ const FILE_ICON_SOURCES = {
   "file-c": cIcon,
   "file-cpp": cppIcon,
   "file-css": cssIcon,
+  "file-docker": dockerIcon,
+  "file-editorconfig": editorconfigIcon,
+  "file-eslint": eslintIcon,
+  "file-gemfile": gemfileIcon,
   "file-go": goIcon,
+  "file-gradle": gradleIcon,
   "file-html": htmlIcon,
   "file-java": javaIcon,
   "file-javascript": javascriptIcon,
   "file-kotlin": kotlinIcon,
   "file-less": lessIcon,
+  "file-npm": npmIcon,
   "file-php": phpIcon,
+  "file-pnpm": pnpmIcon,
+  "file-prettier": prettierIcon,
   "file-python": pythonIcon,
   "file-react": reactIcon,
   "file-ruby": rubyIcon,
@@ -195,6 +212,7 @@ const FILE_ICON_SOURCES = {
   "file-swift": swiftIcon,
   "file-typescript": typescriptIcon,
   "file-vue": vueIcon,
+  "file-yarn": yarnIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS | keyof typeof FILE_ICON_SOURCES;

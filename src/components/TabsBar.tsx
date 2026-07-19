@@ -134,7 +134,7 @@ export function TabsBar() {
           setOverId(null);
         }}
       >
-        <Icon name="plus" /><span>Repo</span>
+        <Icon name="folder-git" /><span>Repo</span>
       </button>
       {menu && (
         <ContextMenu

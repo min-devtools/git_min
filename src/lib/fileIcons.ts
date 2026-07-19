@@ -64,13 +64,65 @@ const LANG_TONE: Record<string, string> = {
 };
 
 export type LanguageFileIconName = (typeof LANGUAGE_ICON)[keyof typeof LANGUAGE_ICON];
-export type FileIconName = LanguageFileIconName | "git-branch" | "file-cog" | "file-json" | "file-code" | "file-text" | "file-image" | "terminal" | "file";
+export type FileIconName =
+  | LanguageFileIconName
+  | "git-branch"
+  | "file-cog"
+  | "file-docker"
+  | "file-editorconfig"
+  | "file-eslint"
+  | "file-gemfile"
+  | "file-gradle"
+  | "file-json"
+  | "file-npm"
+  | "file-pnpm"
+  | "file-prettier"
+  | "file-code"
+  | "file-text"
+  | "file-image"
+  | "file-yarn"
+  | "terminal"
+  | "file";
+
+const FILENAME_ICON: Record<string, FileIconName> = {
+  "package.json": "file-npm",
+  "package-lock.json": "file-npm",
+  ".npmrc": "file-npm",
+  "yarn.lock": "file-yarn",
+  ".yarnrc": "file-yarn",
+  "pnpm-lock.yaml": "file-pnpm",
+  "pnpm-workspace.yaml": "file-pnpm",
+  ".pnpmfile.cjs": "file-pnpm",
+  "composer.json": "file-php",
+  "gemfile": "file-gemfile",
+  "gemfile.lock": "file-gemfile",
+  "cargo.toml": "file-rust",
+  "cargo.lock": "file-rust",
+  "build.gradle": "file-gradle",
+  "settings.gradle": "file-gradle",
+  ".editorconfig": "file-editorconfig",
+  ".eslintrc": "file-eslint",
+  ".eslintrc.json": "file-eslint",
+  ".eslintrc.js": "file-eslint",
+  ".eslintrc.cjs": "file-eslint",
+  ".eslintrc.yaml": "file-eslint",
+  ".eslintrc.yml": "file-eslint",
+  ".prettierrc": "file-prettier",
+  ".prettierrc.json": "file-prettier",
+  ".prettierrc.js": "file-prettier",
+  ".prettierrc.cjs": "file-prettier",
+  ".prettierrc.yaml": "file-prettier",
+  ".prettierrc.yml": "file-prettier",
+};
 
 /** Filename → icon, so a change list reads by type at a glance. */
 export function fileIcon(path: string): FileIconName {
   const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
   if (base.startsWith(".git")) return "git-branch";
   if (base.startsWith(".env")) return "file-cog";
+  const filenameIcon = FILENAME_ICON[base];
+  if (filenameIcon) return filenameIcon;
+  if (base === ".dockerignore" || base.startsWith("dockerfile") || base.startsWith("docker-compose")) return "file-docker";
   const ext = base.slice(base.lastIndexOf(".") + 1);
   if (ext === "json" || ext === "jsonc") return "file-json";
   const languageIcon = LANGUAGE_ICON[ext as keyof typeof LANGUAGE_ICON];

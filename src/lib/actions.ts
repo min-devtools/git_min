@@ -1,10 +1,11 @@
 import { queryClient } from "./queryClient";
+import { open as openFolderDialog } from "@tauri-apps/plugin-dialog";
 import { openExternalUrl } from "./externalLinks";
 import * as git from "./git";
 import { generateCommitMessage } from "./ai";
 import { useApp } from "../store";
 import { branchCheckoutTarget, checkoutableBranches, diffTargetFor, isBranchNotMergedError, queryGroupsForMutation, reconcileStatusSelection, splitRemoteBranch, type MutationScope } from "./gitUi";
-import type { BranchInfo, StatusEntry } from "./types";
+import type { BranchInfo, ScanHit, StatusEntry } from "./types";
 
 const app = () => useApp.getState();
 
@@ -286,10 +287,17 @@ export async function doDeleteBranch(path: string, name: string) {
 }
 
 export async function doMerge(path: string, target: string) {
+  // name both sides in the prompt, lazygit-style — "into the current branch" is
+  // the one thing the reader can't check while the dialog is up
+  const current = await git.repoInfo(path).then((i) => i.branch).catch(() => null);
+  if (current && target === current) {
+    app().showToast("Merge", `“${target}” is already the current branch.`, "warn");
+    return;
+  }
   const ok = await app().openDialog({
     kind: "confirm",
-    title: "Merge",
-    message: `Merge “${target}” into the current branch?`,
+    title: "Merging",
+    message: `Merge “${target}” into ${current ? `“${current}”` : "the current branch"}?`,
     confirmLabel: "Merge",
   });
   if (ok === null) return;
@@ -715,5 +723,37 @@ export async function openOnRemote(path: string, kind: "pr" | "commit" | "branch
     await openExternalUrl(url);
   } catch (err) {
     app().showToast("Open remote failed", String(err), "err");
+  }
+}
+
+export async function openRepository() {
+  const dir = await openFolderDialog({ directory: true, multiple: false, title: "Open a repository or a folder of repositories" });
+  if (typeof dir !== "string") return;
+  const s = app();
+  try {
+    const hits: ScanHit[] = await git.scanRepos(dir);
+    if (hits.length === 0) {
+      s.showToast("No repositories", "No .git folders found under that path.", "warn");
+      return;
+    }
+    const known = new Set(s.repos.map((r) => r.path));
+    const fresh = hits.filter((h) => !known.has(h.path));
+    const imported = fresh.map((h) => ({ id: crypto.randomUUID(), name: h.name, path: h.path }));
+    s.addRepos(imported);
+    if (imported.length > 0) {
+      s.selectRepo(imported[0].id);
+      s.openRepoTab(imported[0].id);
+      s.showToast("Repositories", `Imported ${imported.length} repo${imported.length === 1 ? "" : "s"}.`, "ok");
+    } else if (hits.length === 1) {
+      const existing = s.repos.find((repo) => repo.path === hits[0].path);
+      if (existing) {
+        s.selectRepo(existing.id);
+        s.openRepoTab(existing.id);
+      }
+    } else {
+      s.showToast("Repositories", "All found repositories are already added.", "warn");
+    }
+  } catch (err) {
+    s.showToast("Scan failed", String(err), "err");
   }
 }

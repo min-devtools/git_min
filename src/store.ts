@@ -13,10 +13,18 @@ import {
 
 const TAB_META: Record<TabKind, { title: string; icon: TabDef["icon"]; iconClass: string }> = {
   welcome: { title: "Repositories", icon: "folder", iconClass: "soft-blue" },
-  repo: { title: "Repo", icon: "git-branch", iconClass: "soft-green" },
+  repo: { title: "Repo", icon: "folder-git", iconClass: "soft-green" },
   settings: { title: "Settings", icon: "settings", iconClass: "soft-orange" },
   diff: { title: "Diff", icon: "code", iconClass: "soft-orange" },
   "git-resource": { title: "Git", icon: "list", iconClass: "soft-blue" },
+};
+
+const RESOURCE_ICON: Record<GitResourceKind, TabDef["icon"]> = {
+  changes: "status",
+  branches: "git-branch",
+  commits: "git-commit",
+  tags: "tag",
+  stashes: "layers",
 };
 
 const diffTabId = (repoTabId: string) => `diff-${repoTabId}`;
@@ -91,7 +99,11 @@ function loadSession(): {
     const tabs: TabDef[] = s.tabs
       // contextual tabs are not restored: they belong to the current repo session
       .filter((t: TabDef) => TAB_META[t.kind] && t.kind !== "diff" && t.kind !== "git-resource" && (t.kind !== "repo" || repoTabs[t.id]))
-      .map((t: TabDef) => ({ ...t, icon: TAB_META[t.kind].icon, iconClass: TAB_META[t.kind].iconClass }));
+      .map((t: TabDef) => ({
+        ...t,
+        icon: t.kind === "git-resource" && t.resource ? RESOURCE_ICON[t.resource] : TAB_META[t.kind].icon,
+        iconClass: TAB_META[t.kind].iconClass,
+      }));
     if (!tabs.length) return null;
     return {
       tabs,
@@ -354,6 +366,7 @@ export const useApp = create<AppState>((set, get) => ({
         id,
         kind: "git-resource",
         ...TAB_META["git-resource"],
+        icon: RESOURCE_ICON[resource],
         title: RESOURCE_TITLE[resource],
         repoTabId: ownerTabId,
         resource,

@@ -1,15 +1,15 @@
 export type TreeSitterLanguage =
   | "bash" | "c" | "cpp" | "c_sharp" | "css" | "dart" | "go" | "html"
-  | "java" | "javascript" | "json" | "kotlin" | "python" | "rust" | "toml"
+  | "java" | "javascript" | "json" | "kotlin" | "python" | "ruby" | "rust" | "toml"
   | "tsx" | "typescript" | "yaml";
 
 const EXTENSIONS: Record<string, TreeSitterLanguage> = {
   bash: "bash", sh: "bash", zsh: "bash", c: "c", h: "c",
   cc: "cpp", cpp: "cpp", cxx: "cpp", hpp: "cpp", hxx: "cpp", cs: "c_sharp",
-  css: "css", scss: "css", dart: "dart", go: "go", htm: "html", html: "html",
+  css: "css", scss: "css",   dart: "dart", gemfile: "ruby", go: "go", htm: "html", html: "html",
   java: "java", js: "javascript", cjs: "javascript", mjs: "javascript", jsx: "javascript",
   json: "json", jsonc: "json", kt: "kotlin", kts: "kotlin", py: "python", pyw: "python",
-  rs: "rust", toml: "toml", tsx: "tsx", ts: "typescript", cts: "typescript", mts: "typescript",
+  rb: "ruby", rs: "rust", toml: "toml", tsx: "tsx", ts: "typescript", cts: "typescript", mts: "typescript",
   yaml: "yaml", yml: "yaml",
 };
 
@@ -33,7 +33,9 @@ export function extOf(file: string): string {
 }
 
 export function languageForExtension(ext: string): TreeSitterLanguage | null {
-  return EXTENSIONS[ext.toLowerCase()] ?? null;
+  const e = ext.toLowerCase();
+  if (e === "dockerfile" || e.startsWith("dockerfile-")) return "bash";
+  return EXTENSIONS[e] ?? null;
 }
 
 export type SyntaxRole = "function" | "property" | "parameter" | "type" | "variable";

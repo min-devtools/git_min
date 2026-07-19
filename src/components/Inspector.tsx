@@ -137,8 +137,12 @@ function ActionsTab({ path, hash, branchName }: { path: string; hash: string | n
           <ToolButton onClick={() => void openOnRemote(path, "branch", remoteRef)}><Icon name="globe" /> Open branch</ToolButton>
           {prTarget && <ToolButton variant="primary" onClick={() => void openOnRemote(path, "pr", prTarget)}><Icon name="pull-request" /> Open PR</ToolButton>}
           <ToolButton onClick={() => void doCheckoutBranch(path, branch)}><Icon name="check" /> Checkout</ToolButton>
-          {branch.kind === "local" && !branch.head && <>
+          {/* a remote branch merges into the current one just as well as a local
+              one — only the branch you are standing on has nothing to merge */}
+          {branch.kind !== "tag" && !branch.head && (
             <ToolButton onClick={() => void doMerge(path, branch.name)}><Icon name="git-merge" /> Merge into current</ToolButton>
+          )}
+          {branch.kind === "local" && !branch.head && <>
             <ToolButton onClick={() => void doRebase(path, branch.name)}><Icon name="history" /> Rebase current here</ToolButton>
             <ToolButton variant="danger" onClick={() => void doDeleteBranch(path, branch.name)}><Icon name="trash" /> Delete branch</ToolButton>
           </>}
@@ -187,7 +191,7 @@ function LineageCard({ path, scope, hash }: { path: string; scope: string | null
       ) : (
         <div className="lineage-step open">
           <span className="lineage-dot" />
-          <span className="muted">not merged anywhere yet</span>
+          <span className="muted">This line is not contained in any other branch</span>
         </div>
       )}
     </div>
