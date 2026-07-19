@@ -41,6 +41,10 @@ assert(gitResources.includes('branch.kind === "tag" ? "tag"'), "Tags must use a 
 assert(appShell.includes('case "git-resource"'), "App must render full Git resource workspace tabs");
 assert(!workingTree.includes("previewItems("), "Working Tree must render the full list — sections scroll, no preview cap");
 assert(css.includes(".commit-footer"), "Commit composer must have a pinned right-dock footer");
+assert(
+  graphTable.includes('className="graph-subject-content"') && css.includes(".graph-subject-content {") && css.includes("width: max-content;") && css.includes("overflow-x: auto;"),
+  "Commit cells must have a bounded horizontal scroll region",
+);
 
 assert(!sidebar.includes('className="side-search"'), "Repo filtering lives on Welcome, not the left dock");
 assert(welcome.includes("welcome-filter"), "Welcome must own the repository filter");

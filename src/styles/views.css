@@ -269,10 +269,13 @@ body {
 .graph-subject {
   flex: 1;
   min-width: 0;
+  overflow-x: auto;
+}
+.graph-subject-content {
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 6px;
-  overflow-x: auto;
 }
 .subject-text { flex: none; white-space: nowrap; color: var(--text); }
 .graph-row.selected .subject-text { color: var(--text); }

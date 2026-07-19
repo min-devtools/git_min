@@ -290,14 +290,16 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
                   <RowRails row={row} line={onlyLine ? null : line} />
                 </span>
                 <span className="graph-subject">
-                  <RefChips
-                    refs={c.refs}
-                    pinned={pinned.includes(row.hash)}
-                    remoteBranches={remoteBranches}
-                    onSelectRef={(name) => onSelectRef(name, row.hash)}
-                    onPin={pin}
-                  />
-                  <span className="subject-text">{c.subject}</span>
+                  <span className="graph-subject-content">
+                    <RefChips
+                      refs={c.refs}
+                      pinned={pinned.includes(row.hash)}
+                      remoteBranches={remoteBranches}
+                      onSelectRef={(name) => onSelectRef(name, row.hash)}
+                      onPin={pin}
+                    />
+                    <span className="subject-text">{c.subject}</span>
+                  </span>
                 </span>
                 <span className="graph-author">{c.author}</span>
                 <span className="graph-hash">{shortHash(c.hash)}</span>
