@@ -189,6 +189,7 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
       e.stopPropagation();
       setPinned([]);
       setOnlyLine(false);
+      s.setInspectorTab("changes");
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);

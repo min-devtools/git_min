@@ -396,7 +396,7 @@ export const useApp = create<AppState>((set, get) => ({
       const repoTabs = { ...s.repoTabs };
       delete repoTabs[id];
       if (closed.kind === "diff" && closed.repoTabId && repoTabs[closed.repoTabId]) {
-        repoTabs[closed.repoTabId] = { ...repoTabs[closed.repoTabId], diff: null, blame: null };
+        repoTabs[closed.repoTabId] = { ...repoTabs[closed.repoTabId], diff: null, blame: null, inspectorTab: "changes" };
       }
       let activeTabId = s.activeTabId;
       if (activeTabId === id && closed.kind === "diff" && closed.repoTabId && repoTabs[closed.repoTabId]) {

@@ -5,7 +5,6 @@ import { Icon } from "../ui/Icon";
 import { activeRepo, activeRepoTab, useApp } from "../store";
 import { useRepoInfo } from "../lib/queries";
 import { doCreateBranch, doFetch, doPull, doPush } from "../lib/actions";
-import { openSettingsWindow } from "../lib/openSettings";
 import logo from "../assets/logo.png";
 import { themeBase } from "../lib/themes";
 
@@ -24,10 +23,10 @@ function Signal({
 export function Titlebar() {
   const repo = useApp((s) => activeRepo(s));
   const info = useRepoInfo(repo?.path);
-  const { toggleTheme, toggleCompact, setCommandOpen, theme, operation } = useApp(
+  const { toggleTheme, toggleCompact, setCommandOpen, theme, openTab, operation } = useApp(
     useShallow((s) => ({
       toggleTheme: s.toggleTheme, toggleCompact: s.toggleCompact, setCommandOpen: s.setCommandOpen,
-      theme: s.theme,
+      theme: s.theme, openTab: s.openTab,
       operation: s.operations[activeRepo(s)?.path ?? ""],
     })),
   );
@@ -95,7 +94,7 @@ export function Titlebar() {
         <ToolButton iconOnly title="Toggle compact density" aria-label="Toggle compact density" onClick={toggleCompact}>
           <Icon name="rows" />
         </ToolButton>
-        <ToolButton iconOnly title="Settings (⌘,)" aria-label="Open settings" onClick={() => void openSettingsWindow("GitMin")}>
+        <ToolButton iconOnly title="Settings (⌘,)" aria-label="Open settings" onClick={() => openTab("settings")}>
           <Icon name="settings" />
         </ToolButton>
       </div>

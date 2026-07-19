@@ -266,9 +266,9 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
         }
         case "?": s.setKeymapOpen(true); break;
         case "Escape":
-          if (ui.blame) patch({ blame: null });
-          else if (ui.diff) patch({ diff: null });
-          else if (ui.selectedCommit) patch({ selectedCommit: null });
+          if (ui.blame) patch({ blame: null, inspectorTab: "changes" });
+          else if (ui.diff) patch({ diff: null, inspectorTab: "changes" });
+          else if (ui.selectedCommit) patch({ selectedCommit: null, inspectorTab: "changes" });
           break;
         default: return;
       }

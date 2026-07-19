@@ -19,7 +19,6 @@ import { inspectorAvailable, useApp } from "./store";
 import { themeBase } from "./lib/themes";
 import { applyPalette, clearAppliedPalette, readBuiltinPalette } from "./lib/themeContract";
 import { openRepository } from "./lib/actions";
-import { openSettingsWindow } from "./lib/openSettings";
 import type { TabDef } from "./lib/types";
 import { Icon } from "./ui/Icon";
 
@@ -32,9 +31,6 @@ function renderView(tab: TabDef, active: boolean) {
     case "git-resource": return <GitResourceView key={tab.id} repoTabId={tab.repoTabId!} resource={tab.resource!} active={active} />;
   }
 }
-
-// ponytail: settings window — when ?view=settings, render SettingsView alone (no titlebar/sidebar/etc). Native window owns chrome, T3.
-const isSettingsWindow = new URLSearchParams(window.location.search).get("view") === "settings";
 
 export default function App() {
   const {
@@ -133,7 +129,7 @@ export default function App() {
       }
       if (mod && e.key === ",") {
         e.preventDefault();
-        void openSettingsWindow("GitMin");
+        useApp.getState().openTab("settings");
       }
       if (mod && key === "w") {
         e.preventDefault();
@@ -164,21 +160,6 @@ export default function App() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [setCommandOpen, toggleLeft, toggleRight]);
-
-  // ponytail: settings window — bare-minimum frame: theme + font setup already ran above. T3: native window owns chrome.
-  if (isSettingsWindow) {
-    return (
-      <div className="app-frame settings-window">
-        <main className="main">
-          <section className="workspace">
-            <SettingsView key="settings" active />
-          </section>
-        </main>
-        <Toast />
-        <Dialog />
-      </div>
-    );
-  }
 
   return (
     <div className="app-frame">
