@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { isThemeId, themeBase } from "./lib/themes";
 import { clampFontSize, DEFAULT_FONT_SIZE } from "./lib/fontScale";
 import { isBrowserId, type BrowserId } from "./lib/browserPreference";
+import type { ConnColor } from "./lib/connColor";
 import type { GitResourceKind, Repo, TabDef, TabKind } from "./lib/types";
 import {
   createRepoTabDefaults,
@@ -193,6 +194,7 @@ interface AppState {
   addRepos: (repos: Repo[]) => void;
   removeRepo: (id: string) => void;
   renameRepo: (id: string, name: string) => void;
+  setRepoColor: (id: string, color: ConnColor | null) => void;
   selectRepo: (id: string | null) => void;
 
   openTab: (kind: TabKind) => void;
@@ -325,6 +327,10 @@ export const useApp = create<AppState>((set, get) => ({
     set((s) => ({
       repos: s.repos.map((r) => (r.id === id ? { ...r, name: name.trim() || r.name } : r)),
       tabs: s.tabs.map((t) => (t.id === repoTabId(id) ? { ...t, title: name.trim() || t.title } : t)),
+    })),
+  setRepoColor: (id, color) =>
+    set((s) => ({
+      repos: s.repos.map((r) => (r.id === id ? { ...r, color: color ?? undefined } : r)),
     })),
   selectRepo: (id) => set({ selectedRepoId: id }),
 

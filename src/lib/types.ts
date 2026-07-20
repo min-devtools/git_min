@@ -1,9 +1,12 @@
 import type { IconName } from "../ui/Icon";
+import type { ConnColor } from "./connColor";
 
 /** A registered repository (the app's "connection" equivalent). */
 export interface Repo {
   id: string;
   name: string;
+  /** user-assigned identity color, drawn as the dot on every tab bound to this repository */
+  color?: ConnColor;
   path: string;
   /** unix ms of the most recently completed Git action — drives the "recent" sort */
   lastActionAt?: number;

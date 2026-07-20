@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useApp } from "../store";
+import { connStyle } from "../lib/connColor";
 import { ContextMenu } from "../ui/ContextMenu";
 import { Icon } from "../ui/Icon";
 import { hasCommitDraft } from "../lib/gitUi";
+import type { TabDef } from "../lib/types";
 
 export function TabsBar() {
-  const { tabs, activeTabId, activateTab, closeTab, openTab, repoTabs, renameRepo, reorderTab } = useApp(
+  const { tabs, repos, activeTabId, activateTab, closeTab, openTab, repoTabs, renameRepo, reorderTab } = useApp(
     useShallow((s) => ({
-      tabs: s.tabs, activeTabId: s.activeTabId, activateTab: s.activateTab, closeTab: s.closeTab,
+      tabs: s.tabs, repos: s.repos, activeTabId: s.activeTabId, activateTab: s.activateTab, closeTab: s.closeTab,
       openTab: s.openTab, repoTabs: s.repoTabs, renameRepo: s.renameRepo, reorderTab: s.reorderTab,
     })),
   );
@@ -32,9 +34,17 @@ export function TabsBar() {
   const draggedTabId = (event: React.DragEvent) =>
     event.dataTransfer.getData("application/x-gitmin-tab") || dragId;
 
+  // diff / git-resource tabs hang off a repo tab, so they inherit its repository
+  const repoOf = (tab: TabDef) => {
+    const repoId = (repoTabs[tab.id] ?? (tab.repoTabId ? repoTabs[tab.repoTabId] : undefined))?.repoId;
+    return repoId ? repos.find((r) => r.id === repoId) : undefined;
+  };
+
   return (
     <nav className="tabs" role="tablist" aria-label="Open workspaces">
-      {tabs.map((tab) => (
+      {tabs.map((tab) => {
+        const repo = repoOf(tab);
+        return (
         <button
           key={tab.id}
           type="button"
@@ -42,6 +52,7 @@ export function TabsBar() {
           aria-selected={tab.id === activeTabId}
           draggable={!editingId}
           className={`tab ${tab.id === activeTabId ? "active" : ""} ${dragId === tab.id ? "dragging" : ""} ${overId === tab.id && dragId && dragId !== tab.id ? "drag-over" : ""}`}
+          style={connStyle(repo?.color)}
           onClick={() => activateTab(tab.id)}
           onAuxClick={(e) => {
             // middle-click closes the tab
@@ -79,8 +90,9 @@ export function TabsBar() {
             setDragId(null);
             setOverId(null);
           }}
-          title={tab.kind === "repo" ? "Double-click to rename · right-click for menu" : undefined}
+          title={repo ? `${tab.title} · ${repo.name}` : tab.kind === "repo" ? "Double-click to rename · right-click for menu" : undefined}
         >
+          {repo && <span className="conn-dot" />}
           <Icon name={tab.icon} className={tab.iconClass} />
           {editingId === tab.id ? (
             <input
@@ -103,6 +115,7 @@ export function TabsBar() {
               {repoTabs[tab.id] && hasCommitDraft(repoTabs[tab.id]) ? <i className="tab-dirty" aria-label="Unsaved commit draft"> •</i> : null}
             </>
           )}
+          {repo && !editingId && <span className="tab-conn">{repo.name}</span>}
           <span
             className="tab-close"
             title={`Close ${tab.title} (⌘W)`}
@@ -115,7 +128,8 @@ export function TabsBar() {
             <Icon name="x" size={13} />
           </span>
         </button>
-      ))}
+        );
+      })}
       <button
         type="button"
         className="tab-add"

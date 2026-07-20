@@ -8,6 +8,8 @@ import { GitResourcePreviews } from "./GitResources";
 import { useRepoInfos } from "../lib/queries";
 import type { Repo, RepoInfo } from "../lib/types";
 import { Icon } from "../ui/Icon";
+import { ColorPicker } from "../ui/ColorPicker";
+import { connStyle } from "../lib/connColor";
 import { sortRepos } from "../lib/repoSort";
 
 /** Repo entry — single-line design-system row like the sibling apps; branch
@@ -36,7 +38,11 @@ function RepoRow({
       onContextMenu={onMenu}
       title={d?.branch ? `${repo.path} — ${d.branch}` : repo.path}
     >
-      <Icon name="folder-git" size={14} className={active ? "soft-green" : undefined} />
+      <span
+        className="conn-dot"
+        style={connStyle(repo.color)}
+        title={repo.color ? `Color: ${repo.color}` : "No color — set one from the right-click menu"}
+      />
       <span className="repo-name">{repo.name}</span>
       {d && (d.dirty > 0 || d.ahead > 0 || d.behind > 0) && (
         <span className="repo-track">
@@ -53,13 +59,15 @@ const RECENT_LIMIT = 5;
 
 export function Sidebar() {
   const [repoMenu, setRepoMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [coloringId, setColoringId] = useState<string | null>(null);
 
   const {
-    repos, selectRepo, openRepoTab, openTab, removeRepo, renameRepo,
+    repos, selectRepo, openRepoTab, openTab, removeRepo, renameRepo, setRepoColor,
     openDialog, activeKind,
   } = useApp(useShallow((s) => ({
     repos: s.repos, selectRepo: s.selectRepo,
     openRepoTab: s.openRepoTab, openTab: s.openTab, removeRepo: s.removeRepo, renameRepo: s.renameRepo,
+    setRepoColor: s.setRepoColor,
     openDialog: s.openDialog,
     activeKind: s.tabs.find((t) => t.id === s.activeTabId)?.kind,
   })));
@@ -197,6 +205,11 @@ export function Sidebar() {
               },
             },
             {
+              icon: "status",
+              label: "Set color…",
+              onClick: () => setColoringId(repoMenu.id),
+            },
+            {
               icon: "copy",
               label: "Copy path",
               onClick: () => {
@@ -230,6 +243,14 @@ export function Sidebar() {
               },
             },
           ]}
+        />
+      )}
+
+      {coloringId && (
+        <ColorPicker
+          value={repos.find((r) => r.id === coloringId)?.color}
+          onPick={(color) => setRepoColor(coloringId, color)}
+          onClose={() => setColoringId(null)}
         />
       )}
     </aside>

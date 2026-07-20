@@ -10,6 +10,7 @@ const inspector = read("src/components/Inspector.tsx");
 const workingTree = read("src/components/WorkingTree.tsx");
 const welcome = read("src/components/views/WelcomeView.tsx");
 const palette = read("src/components/CommandPalette.tsx");
+const tabsBar = read("src/components/TabsBar.tsx");
 const miniTabs = read("src/ui/MiniTabs.tsx");
 const appShell = read("src/App.tsx");
 const queries = read("src/lib/queries.ts");
@@ -35,7 +36,9 @@ assert(inspector.includes("<CommitComposer"), "Inspector Changes tab must render
 assert(sidebar.includes("GitResourcePreviews"), "The left dock owns ref navigation for the open repository");
 assert(!inspector.includes("GitResourcePreviews"), "Refs must not be duplicated in the right dock");
 assert(sidebar.includes("RECENT_LIMIT = 5"), "The left dock lists recent repositories only — the rest live on Welcome");
-assert(sidebar.includes('<Icon name="folder-git"'), "Recent repositories must not reuse the local-branch glyph");
+assert(sidebar.includes('className="conn-dot"'), "Recent repositories must lead with the repository identity color dot");
+assert(!sidebar.includes('<Icon name="git-branch"'), "Recent repositories must not reuse the local-branch glyph");
+assert(tabsBar.includes('className="conn-dot"') && tabsBar.includes('className="tab-conn"'), "Repo-bound tabs must show the identity dot and the repository name");
 assert(gitResources.includes('branch.kind === "remote" ? "cloud"'), "Remote refs must have a distinct cloud glyph");
 assert(gitResources.includes('branch.kind === "tag" ? "tag"'), "Tags must use a tag glyph instead of a branch/hash glyph");
 assert(appShell.includes('case "git-resource"'), "App must render full Git resource workspace tabs");
