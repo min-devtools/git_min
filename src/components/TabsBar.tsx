@@ -20,6 +20,12 @@ export function TabsBar() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // the bar scrolls, so a tab reached by ⌘1-9 / the palette / a close can be off-screen
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeTabId]);
 
   useEffect(() => {
     if (editingId) inputRef.current?.select();
@@ -47,6 +53,7 @@ export function TabsBar() {
         return (
         <button
           key={tab.id}
+          ref={tab.id === activeTabId ? activeRef : undefined}
           type="button"
           role="tab"
           aria-selected={tab.id === activeTabId}
@@ -90,7 +97,7 @@ export function TabsBar() {
             setDragId(null);
             setOverId(null);
           }}
-          title={repo ? `${tab.title} · ${repo.name}` : tab.kind === "repo" ? "Double-click to rename · right-click for menu" : undefined}
+          title={repo ? `${tab.title} Â· ${repo.name}` : tab.kind === "repo" ? "Double-click to rename Â· right-click for menu" : undefined}
         >
           {repo && <span className="conn-dot" />}
           <Icon name={tab.icon} className={tab.iconClass} />
@@ -112,13 +119,13 @@ export function TabsBar() {
           ) : (
             <>
               <span className="tab-title">{tab.title}</span>
-              {repoTabs[tab.id] && hasCommitDraft(repoTabs[tab.id]) ? <i className="tab-dirty" aria-label="Unsaved commit draft"> •</i> : null}
+              {repoTabs[tab.id] && hasCommitDraft(repoTabs[tab.id]) ? <i className="tab-dirty" aria-label="Unsaved commit draft"> â¢</i> : null}
             </>
           )}
           {repo && !editingId && <span className="tab-conn">{repo.name}</span>}
           <span
             className="tab-close"
-            title={`Close ${tab.title} (⌘W)`}
+            title={`Close ${tab.title} (âW)`}
             aria-label={`Close ${tab.title}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -133,7 +140,7 @@ export function TabsBar() {
       <button
         type="button"
         className="tab-add"
-        title="Add a repository (⌘N)"
+        title="Add a repository (âN)"
         onClick={() => openTab("welcome")}
         onDragOver={(e) => {
           if (!dragId) return;
@@ -168,7 +175,7 @@ export function TabsBar() {
                   },
                 }]
               : []),
-            { icon: "x" as const, label: "Close (⌘W)", onClick: () => void closeTab(menu.id) },
+            { icon: "x" as const, label: "Close (âW)", onClick: () => void closeTab(menu.id) },
             {
               icon: "rows" as const,
               label: "Close others",
