@@ -97,7 +97,7 @@ export function TabsBar() {
             setDragId(null);
             setOverId(null);
           }}
-          title={repo ? `${tab.title} Â· ${repo.name}` : tab.kind === "repo" ? "Double-click to rename Â· right-click for menu" : undefined}
+          title={repo && repo.name !== tab.title ? `${tab.title} · ${repo.name}` : tab.kind === "repo" ? "Double-click to rename · right-click for menu" : undefined}
         >
           {repo && <span className="conn-dot" />}
           <Icon name={tab.icon} className={tab.iconClass} />
@@ -119,13 +119,16 @@ export function TabsBar() {
           ) : (
             <>
               <span className="tab-title">{tab.title}</span>
-              {repoTabs[tab.id] && hasCommitDraft(repoTabs[tab.id]) ? <i className="tab-dirty" aria-label="Unsaved commit draft"> â¢</i> : null}
+              {repoTabs[tab.id] && hasCommitDraft(repoTabs[tab.id]) ? <i className="tab-dirty" aria-label="Unsaved commit draft"> •</i> : null}
             </>
           )}
-          {repo && !editingId && <span className="tab-conn">{repo.name}</span>}
+          {repo && !editingId && repo.name !== tab.title && (
+            // a tab already titled after its owner would just repeat the name
+            <span className="tab-conn">{repo.name}</span>
+          )}
           <span
             className="tab-close"
-            title={`Close ${tab.title} (âW)`}
+            title={`Close ${tab.title} (⌘W)`}
             aria-label={`Close ${tab.title}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -140,7 +143,7 @@ export function TabsBar() {
       <button
         type="button"
         className="tab-add"
-        title="Add a repository (âN)"
+        title="Add a repository (⌘N)"
         onClick={() => openTab("welcome")}
         onDragOver={(e) => {
           if (!dragId) return;
@@ -175,7 +178,7 @@ export function TabsBar() {
                   },
                 }]
               : []),
-            { icon: "x" as const, label: "Close (âW)", onClick: () => void closeTab(menu.id) },
+            { icon: "x" as const, label: "Close (⌘W)", onClick: () => void closeTab(menu.id) },
             {
               icon: "rows" as const,
               label: "Close others",
