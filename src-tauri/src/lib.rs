@@ -690,7 +690,7 @@ async fn staged_diff(path: String) -> Result<String, String> {
 
 #[tauri::command]
 async fn status(path: String) -> Result<Vec<StatusEntry>, String> {
-    let raw = git_async(path, vec!["status".into(), "--porcelain=v2".into(), "-z".into()]).await?;
+    let raw = git_async(path, vec!["status".into(), "--porcelain=v2".into(), "-z".into(), "-uall".into()]).await?;
     Ok(parse_status(&raw))
 }
 

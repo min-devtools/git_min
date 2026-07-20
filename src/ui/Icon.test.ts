@@ -11,6 +11,7 @@ equal(fileIcon("src/app.jsx"), "file-react");
 equal(fileIcon("src/app.ts"), "file-typescript");
 equal(fileIcon("src/app.tsx"), "file-react");
 equal(fileIcon("src/unknown.xyz"), "file");
+equal(fileIcon("data.json"), "file-json");
 
 equal(fileIcon("Dockerfile"), "file-docker");
 equal(fileIcon("Dockerfile-dev"), "file-docker");

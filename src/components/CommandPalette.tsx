@@ -77,7 +77,7 @@ export function CommandPalette() {
             { icon: "download" as const, group: "Commands" as const, label: "Pull", kbd: "p", action: () => void doPull(repo.path) },
             { icon: "upload" as const, group: "Commands" as const, label: "Push", kbd: "P", action: () => void doPush(repo.path) },
             { icon: "git-branch" as const, group: "Commands" as const, label: "New branch", kbd: "n", action: () => void doCreateBranch(repo.path) },
-            { icon: "check" as const, group: "Commands" as const, label: "Checkout branch…", kbd: "c", action: () => void doQuickCheckout(repo.path) },
+            { icon: "check" as const, group: "Commands" as const, label: "Checkout branch…", kbd: "b", action: () => void doQuickCheckout(repo.path) },
           ]
         : []),
       { icon: "keyboard", group: "Commands", label: "Keyboard shortcuts", kbd: "?", action: () => app.setKeymapOpen(true) },

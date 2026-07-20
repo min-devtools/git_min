@@ -14,7 +14,7 @@ import {
   doStage, doStashPush, doUndoCommit, doUnstage, openOnRemote,
 } from "../../lib/actions";
 import type { StatusEntry } from "../../lib/types";
-import { diffTargetFor, isSameStatusEntry, matchesCommitQuery, nextPanel, stageableEntries, visibleStatusOrder } from "../../lib/gitUi";
+import { adjacentStatusSelection, diffTargetFor, isSameStatusEntry, matchesCommitQuery, nextPanel, repoShortcutAction, stageableEntries, visibleStatusOrder } from "../../lib/gitUi";
 
 export function RepoView({ tabId, active }: { tabId: string; active: boolean }) {
   const { ui, repo, patchRepoTab, vimKeys, operation } = useApp(
@@ -147,12 +147,26 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
           });
       };
       const selectedEntry = (): StatusEntry | undefined => files.find((f) => isSameStatusEntry(f, ui.selectedStatus));
-      const toggleStage = () => {
+      const toggleStage = async () => {
         const f = selectedEntry();
         if (!f) return;
-        if (f.area === "staged") void doUnstage(path, [f.path]);
-        else if (f.area === "conflict") s.showToast("Conflict unresolved", "Choose a side or edit the file, then mark it resolved.", "warn");
-        else void doStage(path, [f.path]);
+        if (f.area === "conflict") {
+          s.showToast("Conflict unresolved", "Choose a side or edit the file, then mark it resolved.", "warn");
+          return;
+        }
+        const adjacent = adjacentStatusSelection(files, f);
+        patch({
+          selectedStatus: adjacent ? { path: adjacent.path, area: adjacent.area } : null,
+          diff: adjacent ? diffTargetFor(adjacent) : null,
+        });
+        const changed = f.area === "staged" ? await doUnstage(path, [f.path]) : await doStage(path, [f.path]);
+        if (!changed) {
+          const current = useApp.getState().repoTabs[tabId]?.selectedStatus;
+          const expected = adjacent ? { path: adjacent.path, area: adjacent.area } : null;
+          if ((current === null && expected === null) || (current && expected && isSameStatusEntry(current, expected))) {
+            patch({ selectedStatus: { path: f.path, area: f.area }, diff: diffTargetFor(f) });
+          }
+        }
       };
       const stageAll = () => {
         const unstaged = stageableEntries(files);
@@ -207,7 +221,7 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
         case "a": {
           if (ui.focusedPanel !== "changes") return;
           e.preventDefault();
-          toggleStage();
+          void toggleStage();
           break;
         }
         case "A": {
@@ -247,7 +261,17 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
           break;
         case "n": void doCreateBranch(path); break;
         case "b":
-        case "c": void doQuickCheckout(path); break;
+        case "c": {
+          const action = repoShortcutAction(e.key);
+          if (action === "checkout") void doQuickCheckout(path);
+          else if (action === "focus-commit") {
+            e.preventDefault();
+            useApp.setState({ rightCollapsed: false });
+            patch({ focusedPanel: "changes", inspectorTab: "changes" });
+            requestAnimationFrame(() => document.getElementById(`commit-message-${tabId}`)?.focus());
+          }
+          break;
+        }
         // m works from any panel — the selected ref is what gets merged, and a
         // silent no-op here just reads as a missing binding
         case "m":

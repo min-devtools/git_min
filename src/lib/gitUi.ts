@@ -3,6 +3,13 @@ import type { BranchInfo, CommitInfo, StatusEntry } from "./types";
 export type StatusSelection = Pick<StatusEntry, "path" | "area">;
 export type NavigablePanel = "changes" | "branches" | "graph" | "files";
 export type InspectorMode = "changes" | "diff" | "actions";
+export type RepoShortcutAction = "focus-commit" | "checkout";
+
+export function repoShortcutAction(key: string): RepoShortcutAction | null {
+  if (key === "c") return "focus-commit";
+  if (key === "b") return "checkout";
+  return null;
+}
 
 export function createRepoTabDefaults(repoId: string) {
   return {
@@ -136,6 +143,16 @@ export function statusEntryKey(entry: StatusSelection): string {
 
 export function isSameStatusEntry(entry: StatusSelection, selected: StatusSelection | null): boolean {
   return selected !== null && entry.path === selected.path && entry.area === selected.area;
+}
+
+export function adjacentStatusSelection(entries: StatusEntry[], selected: StatusSelection): StatusEntry | null {
+  const section = entries.filter((entry) =>
+    selected.area === "unstaged" || selected.area === "untracked"
+      ? entry.area === "unstaged" || entry.area === "untracked"
+      : entry.area === selected.area,
+  );
+  const index = section.findIndex((entry) => isSameStatusEntry(entry, selected));
+  return section[index + 1] ?? section[index - 1] ?? null;
 }
 
 export function countPhysicalChanges(entries: StatusEntry[]): number {

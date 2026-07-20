@@ -10,6 +10,7 @@ const assert = {
 };
 import {
   branchCheckoutTarget,
+  adjacentStatusSelection,
   canSubmitPrompt,
   checkoutableBranches,
   condenseDiff,
@@ -29,6 +30,7 @@ import {
   refName,
   matchesCommitQuery,
   reconcileStatusSelection,
+  repoShortcutAction,
   splitPath,
   splitRemoteBranch,
   statusEntryKey,
@@ -37,6 +39,10 @@ import {
   visibleStatusOrder,
 } from "./gitUi";
 import type { StatusEntry } from "./types";
+
+assert.equal(repoShortcutAction("c"), "focus-commit");
+assert.equal(repoShortcutAction("b"), "checkout");
+assert.equal(repoShortcutAction("x"), null);
 
 const mm: StatusEntry[] = [
   { path: "src/app.ts", origPath: "", area: "staged", code: "MM" },
@@ -227,6 +233,16 @@ const mixed: StatusEntry[] = [
   conflict,
   untracked,
 ];
+assert.deepEqual(adjacentStatusSelection(mixed, { path: "z/late.ts", area: "unstaged" }), untracked);
+assert.deepEqual(adjacentStatusSelection(mixed, { path: "notes.txt", area: "untracked" }), mixed[0]);
+const twoUnstaged: StatusEntry[] = [
+  { path: "first.ts", origPath: "", area: "unstaged", code: ".M" },
+  { path: "second.ts", origPath: "", area: "unstaged", code: ".M" },
+];
+assert.deepEqual(adjacentStatusSelection(twoUnstaged, { path: "first.ts", area: "unstaged" }), twoUnstaged[1]);
+assert.deepEqual(adjacentStatusSelection(twoUnstaged, { path: "second.ts", area: "unstaged" }), twoUnstaged[0]);
+assert.equal(adjacentStatusSelection([twoUnstaged[0]], twoUnstaged[0]), null);
+assert.equal(adjacentStatusSelection([mm[0]], mm[0]), null);
 assert.deepEqual(
   visibleStatusOrder(mixed, "flat").map((entry) => statusEntryKey(entry)),
   ["conflict:src/conflict.ts", "staged:a/early.ts", "unstaged:z/late.ts", "untracked:notes.txt"],

@@ -215,8 +215,8 @@ export function GitResourcePreviews({ path, tabId, ui }: { path: string; tabId: 
   const groups: Group[] = [
     { kind: "branches", items: checkoutableBranches(refs) },
     { kind: "commits", items: logQ.data?.pages.flat() ?? [] },
-    { kind: "tags", items: refs.filter((branch) => branch.kind === "tag") },
     { kind: "stashes", items: stashesQ.data ?? [] },
+    { kind: "tags", items: refs.filter((branch) => branch.kind === "tag") },
   ];
   return (
     <div className="git-resource-previews">

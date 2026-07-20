@@ -436,18 +436,20 @@ export async function doGenerateCommitMessage(path: string, tabId: string) {
 export async function doStage(path: string, files: string[]) {
   try {
     const result = await repoOp(path, "Stage", "foreground", "working-tree", () => git.stage(path, files));
-    if (!result) return;
+    return result !== null;
   } catch (err) {
     app().showToast("Stage failed", String(err), "err");
+    return false;
   }
 }
 
 export async function doUnstage(path: string, files: string[]) {
   try {
     const result = await repoOp(path, "Unstage", "foreground", "working-tree", () => git.unstage(path, files));
-    if (!result) return;
+    return result !== null;
   } catch (err) {
     app().showToast("Unstage failed", String(err), "err");
+    return false;
   }
 }
 

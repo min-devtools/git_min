@@ -12,6 +12,7 @@ import gradleIcon from "material-icon-theme/icons/gradle.svg";
 import htmlIcon from "material-icon-theme/icons/html.svg";
 import javaIcon from "material-icon-theme/icons/java.svg";
 import javascriptIcon from "material-icon-theme/icons/javascript.svg";
+import jsonIcon from "material-icon-theme/icons/json.svg";
 import kotlinIcon from "material-icon-theme/icons/kotlin.svg";
 import lessIcon from "material-icon-theme/icons/less.svg";
 import npmIcon from "material-icon-theme/icons/npm.svg";
@@ -196,6 +197,7 @@ const FILE_ICON_SOURCES = {
   "file-html": htmlIcon,
   "file-java": javaIcon,
   "file-javascript": javascriptIcon,
+  "file-json": jsonIcon,
   "file-kotlin": kotlinIcon,
   "file-less": lessIcon,
   "file-npm": npmIcon,

@@ -220,6 +220,7 @@ export function CommitComposer({ path, tabId, ui }: { path: string; tabId: strin
     <div className="commit-footer">
       <div className="commit-box">
         <textarea
+          id={`commit-message-${tabId}`}
           className="commit-message"
           aria-label="Commit message"
           placeholder={`Commit to ${branch}… (⌘↵)`}
