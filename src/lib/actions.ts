@@ -144,7 +144,7 @@ export async function doCheckout(path: string, target: string) {
   }
 }
 
-export async function doCheckoutBranch(path: string, branch: BranchInfo) {
+export async function doCheckoutBranch(path: string, branch: Pick<BranchInfo, "name" | "kind">) {
   const target = branchCheckoutTarget(branch);
   if (target.kind === "local") {
     await doCheckout(path, target.ref);
@@ -370,6 +370,31 @@ export async function doCommit(path: string, message: string, amend = false) {
   } catch (err) {
     app().showToast("Commit failed", String(err), "err");
     return false;
+  }
+}
+
+/** Undo the last commit, keeping its changes staged (lazygit `z`).
+ *  Resolves to the undone message, or null when cancelled / failed. */
+export async function doUndoCommit(path: string): Promise<string | null> {
+  const info = await git.repoInfo(path);
+  if (info.upstream && info.ahead === 0) {
+    const ok = await app().openDialog({
+      kind: "confirm",
+      title: "Undo a published commit?",
+      message: "HEAD is not ahead of its remote. Undoing rewrites history and may require a force push.",
+      confirmLabel: "Undo commit",
+      danger: true,
+    });
+    if (ok === null) return null;
+  }
+  try {
+    const result = await repoOp(path, "Undo commit", "foreground", "history", () => git.undoCommit(path));
+    if (!result) return null;
+    app().showToast("Undo commit", "Changes are staged again.", "ok");
+    return result.value;
+  } catch (err) {
+    app().showToast("Undo failed", String(err), "err");
+    return null;
   }
 }
 

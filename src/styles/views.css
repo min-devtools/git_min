@@ -155,6 +155,7 @@ body {
 }
 .graph-search-count { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .graph-search button { min-height: 18px; padding: 0 4px; border: 0; }
+.graph-search button:disabled { opacity: 0.4; }
 
 .inspector-scroll { position: relative; /* hosts .section-veil */ }
 
@@ -665,7 +666,8 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
 /* repo rows are standard single-line design-system .nav-item rows — hover/active
    states come from the shared component styles, branch lives in the tooltip */
 .repo-list { display: grid; gap: 2px; }
-.repo-row .repo-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+/* truncate on the left like .tab-title — the tail of a repo name is what identifies it */
+.repo-row .repo-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; color: var(--text); }
 .repo-track { display: flex; gap: 4px; }
 .track-badge.dirty { color: var(--blue); }
 

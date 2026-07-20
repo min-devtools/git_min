@@ -9,6 +9,7 @@ const SECTIONS: { title: string; rows: [string, string][] }[] = [
       ["g / G", "Jump to top / bottom (Home / End always work)"],
       ["Enter", "Open (checkout branch · open diff)"],
       ["Esc", "Back / close detail"],
+      ["x", "Graph scope: all refs ⇄ current branch"],
     ],
   },
   {
@@ -25,6 +26,7 @@ const SECTIONS: { title: string; rows: [string, string][] }[] = [
       ["c / b", "Checkout branch (picker · creates if missing)"],
       ["m", "Merge selected branch into current"],
       ["S", "Stash changes"],
+      ["z", "Undo last commit (changes stay staged)"],
     ],
   },
   {

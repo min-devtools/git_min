@@ -12,6 +12,8 @@ export interface LineageStep {
 export interface Lineage {
   /** name of the line the selected commit sits on */
   branch: string;
+  /** other refs sitting on the selected commit — several branches often share a tip */
+  alsoAt: string[];
   /** where the line was created from — null when it reaches the loaded history's end */
   forkedFrom: { hash: string; name: string } | null;
   /** commits on the line itself, from the selected commit back to the fork point */
@@ -20,11 +22,16 @@ export interface Lineage {
   merges: LineageStep[];
 }
 
-/** Prefer a local branch name, then a remote one, then a tag. */
-function bestRef(refs: string[]): string | null {
+/** Refs on a commit, local branches first. `locals` is the repo's real branch
+ *  list — guessing locality from the name ranked "origin/feature/x" as a local
+ *  branch and made the card name the wrong ref when a tip carries several. */
+function refsRanked(refs: string[], locals: ReadonlySet<string>): string[] {
   const names = refs.map(refName).filter((n) => n !== "HEAD");
-  const local = names.find((n) => !n.includes("/") || n.startsWith("feature/") || n.startsWith("release/") || n.startsWith("hotfix/") || n.startsWith("fix/"));
-  return local ?? names[0] ?? null;
+  return [...names.filter((n) => locals.has(n)), ...names.filter((n) => !locals.has(n))];
+}
+
+function bestRef(refs: string[], locals: ReadonlySet<string>): string | null {
+  return refsRanked(refs, locals)[0] ?? null;
 }
 
 /** `Merge branch 'x' into develop` / `Merge remote-tracking … into develop` */
@@ -40,7 +47,7 @@ function mergeTarget(subject: string): string | null {
  * Reads only the commits already loaded in the graph, so a line whose fork point
  * is older than the loaded pages reports `forkedFrom: null` rather than lying.
  */
-export function lineage(commits: CommitInfo[], hash: string | null): Lineage | null {
+export function lineage(commits: CommitInfo[], hash: string | null, locals: ReadonlySet<string>): Lineage | null {
   if (!hash) return null;
   const byHash = new Map(commits.map((c) => [c.hash, c]));
   const head = byHash.get(hash);
@@ -57,7 +64,7 @@ export function lineage(commits: CommitInfo[], hash: string | null): Lineage | n
    *  nearest ref forward along the same line */
   const lineNameOf = (start: CommitInfo): string => {
     for (let c: CommitInfo | undefined = start, hops = 0; c && hops < 500; hops++) {
-      const ref = bestRef(c.refs);
+      const ref = bestRef(c.refs, locals);
       if (ref) return ref;
       const target = mergeTarget(c.subject);
       if (target) return target;
@@ -95,5 +102,7 @@ export function lineage(commits: CommitInfo[], hash: string | null): Lineage | n
       merges.push({ hash: c.hash, name: lineNameOf(c), subject: c.subject, time: c.time });
   }
 
-  return { branch: lineNameOf(head), forkedFrom, ownCommits, merges };
+  const ranked = refsRanked(head.refs, locals);
+  const branch = lineNameOf(head);
+  return { branch, alsoAt: ranked.filter((n) => n !== branch), forkedFrom, ownCommits, merges };
 }

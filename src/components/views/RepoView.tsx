@@ -11,7 +11,7 @@ import { useBranches, useLog, useRepoInfo, useStatus } from "../../lib/queries";
 import {
   doCheckoutBranch, doCherryPickOp, doCreateBranch, doDeleteBranch, doDeleteRemoteBranch, doDiscard,
   doDiscardAll, doFetch, doGenerateCommitMessage, doMerge, doPasteCherryPicks, doMergeAbort, doMergeContinue, doPull, doPush, doQuickCheckout, doRebaseOp,
-  doStage, doStashPush, doUnstage, openOnRemote,
+  doStage, doStashPush, doUndoCommit, doUnstage, openOnRemote,
 } from "../../lib/actions";
 import type { StatusEntry } from "../../lib/types";
 import { diffTargetFor, isSameStatusEntry, matchesCommitQuery, nextPanel, stageableEntries, visibleStatusOrder } from "../../lib/gitUi";
@@ -43,10 +43,20 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
   // search only highlights — the full list stays visible so the graph keeps its
   // shape. ponytail: matches only the pages already loaded, not the whole
   // history; a backend `git log --grep` search is the upgrade path.
-  const searchHits = useMemo(
-    () => (search?.trim() ? new Set(loaded.filter((c) => matchesCommitQuery(c, search)).map((c) => c.hash)) : null),
+  // ordered, not just a Set: ‹ › step through hits in graph order and the counter
+  // needs the position of the selected commit among them
+  const hitList = useMemo(
+    () => (search?.trim() ? loaded.filter((c) => matchesCommitQuery(c, search)).map((c) => c.hash) : null),
     [loaded, search],
   );
+  const searchHits = useMemo(() => (hitList ? new Set(hitList) : null), [hitList]);
+  const hitIndex = hitList ? hitList.indexOf(ui?.selectedCommit ?? "") : -1;
+  // wraps: hitting the end lands back on the first match instead of dead-ending
+  const gotoHit = (dir: 1 | -1) => {
+    if (!hitList?.length) return;
+    const next = hitIndex < 0 ? (dir === 1 ? 0 : hitList.length - 1) : (hitIndex + dir + hitList.length) % hitList.length;
+    patchRepoTab(tabId, { selectedCommit: hitList[next], selectedBranch: null, diff: null });
+  };
   const commits = loaded;
   const hasMore = log.hasNextPage;
   const remoteBranches = useMemo(
@@ -249,6 +259,20 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
         case "P": void doPush(path); break;
         case "f": void doFetch(path); break;
         case "S": void doStashPush(path); break;
+        // same three-state cycle as the History scope button: a branch scope
+        // resolves back to the current branch, then toggles against all refs
+        case "x":
+          patch({ graphScope: ui.graphScope === "HEAD" ? null : "HEAD", selectedCommit: null });
+          break;
+        // lazygit `z`: undo the last commit, its changes back in the index. The old
+        // message refills the commit box unless something is already typed there.
+        case "z":
+          void doUndoCommit(path).then((message) => {
+            if (message === null) return;
+            const draft = useApp.getState().repoTabs[tabId]?.commitDraft ?? "";
+            if (!draft.trim()) patchRepoTab(tabId, { commitDraft: message });
+          });
+          break;
         case "o":
           if (ui.focusedPanel === "graph" && ui.selectedCommit) void openOnRemote(path, "commit", ui.selectedCommit);
           else void openOnRemote(path, "pr", ui.selectedBranch ?? currentBranch);
@@ -379,10 +403,31 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
                       if (e.key === "Escape") {
                         e.stopPropagation();
                         setSearch(null);
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        gotoHit(e.shiftKey ? -1 : 1);
                       }
                     }}
                   />
-                  {search.trim() && <span className="graph-search-count">{searchHits?.size ?? 0}</span>}
+                  {search.trim() && (
+                    <>
+                      <span className="graph-search-count">
+                        {hitList?.length ? `${hitIndex + 1}/${hitList.length}` : "0/0"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Previous match (⇧↵)"
+                        disabled={!hitList?.length}
+                        onClick={() => gotoHit(-1)}
+                      >‹</button>
+                      <button
+                        type="button"
+                        title="Next match (↵)"
+                        disabled={!hitList?.length}
+                        onClick={() => gotoHit(1)}
+                      >›</button>
+                    </>
+                  )}
                   <button type="button" title="Close search (Esc)" onClick={() => setSearch(null)}>
                     <Icon name="x" size={12} />
                   </button>

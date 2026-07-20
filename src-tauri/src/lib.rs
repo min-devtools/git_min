@@ -973,6 +973,23 @@ async fn mark_resolved(path: String, file: String) -> Result<(), String> {
     git_async(path, vec!["add".into(), "--".into(), file]).await.map(|_| ())
 }
 
+/// lazygit's `z`: soft-reset HEAD~1 so the commit's changes land back in the
+/// index. Returns the old message so the UI can refill the commit box.
+#[tauri::command]
+async fn undo_commit(path: String) -> Result<String, String> {
+    let message = git_async(
+        path.clone(),
+        vec!["log".into(), "-1".into(), "--format=%B".into()],
+    )
+    .await?;
+    git_async(
+        path,
+        vec!["reset".into(), "--soft".into(), "HEAD~1".into()],
+    )
+    .await?;
+    Ok(message.trim_end().to_string())
+}
+
 // ---- stash ----
 
 #[tauri::command]
@@ -1278,6 +1295,7 @@ pub fn run() {
             resolve_file,
             mark_resolved,
             stash_list,
+            undo_commit,
             stash_push,
             stash_op,
             blame,

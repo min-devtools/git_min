@@ -4,9 +4,11 @@ import { relatedLine, layoutGraph, type GraphRow } from "../lib/graphLayout";
 import { timeAgo, shortHash } from "../lib/format";
 import type { CommitInfo } from "../lib/types";
 import { ContextMenu } from "../ui/ContextMenu";
-import { doCheckout, doCherryPick, doCreateBranch, openOnRemote } from "../lib/actions";
+import { doCheckout, doCheckoutBranch, doCherryPick, doCreateBranch, openOnRemote } from "../lib/actions";
 import { useApp } from "../store";
 import { refName } from "../lib/gitUi";
+
+type MenuRef = { name: string; kind: "local" | "remote" | "tag" };
 
 export const ROW_H = 28;
 const COL_W = 12;
@@ -79,12 +81,13 @@ function hashHsl(name: string) {
   return { color: `hsl(${hue} ${sat}% ${light}%)`, bg: `hsl(${hue} ${sat}% ${light}% / 0.13)` };
 }
 
-function RefChips({ refs, pinned, remoteBranches, onPin, onSelectRef }: {
+function RefChips({ refs, pinned, remoteBranches, onPin, onSelectRef, onMenuRef }: {
   refs: string[];
   pinned: boolean;
   remoteBranches: Set<string>;
   onPin: (additive: boolean) => void;
   onSelectRef: (name: string) => void;
+  onMenuRef: (ref: MenuRef, e: React.MouseEvent) => void;
 }) {
   return (
     <>
@@ -110,6 +113,12 @@ function RefChips({ refs, pinned, remoteBranches, onPin, onSelectRef }: {
               e.stopPropagation();
               onSelectRef(name);
               onPin(e.metaKey || e.ctrlKey);
+            }}
+            // right-clicking a pill means "act on this ref", not on the commit that
+            // happens to carry it — the menu swaps in a real branch checkout
+            onContextMenu={(e) => {
+              if (r === "HEAD") return; // bare HEAD is the detached commit itself
+              onMenuRef({ name, kind: tag ? "tag" : remote ? "remote" : "local" }, e);
             }}
           >
             {name}
@@ -144,7 +153,7 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
   const barRef = useRef<HTMLDivElement>(null);
   const [subj, setSubj] = useState({ w: 0, view: 0 });
   const [subjScroll, setSubjScroll] = useState(0);
-  const [menu, setMenu] = useState<{ x: number; y: number; hash: string } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; hash: string; ref?: MenuRef } | null>(null);
   // nothing is highlighted until a ref chip is clicked; plain click replaces the
   // highlight (or clears it on the same chip), ⌘-click adds/removes extra lines
   const [pinned, setPinned] = useState<string[]>([]);
@@ -327,6 +336,12 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
                       remoteBranches={remoteBranches}
                       onSelectRef={(name) => onSelectRef(name, row.hash)}
                       onPin={pin}
+                      onMenuRef={(ref, e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSelect(row.hash);
+                        setMenu({ x: e.clientX, y: e.clientY, hash: row.hash, ref });
+                      }}
                     />
                     <span className="subject-text">{c.subject}</span>
                   </span>
@@ -374,11 +389,19 @@ export function GraphTable({ path, commits, searchHits, selected, onSelect, onSe
               strong: true,
               onClick: () => void doCreateBranch(path, menu.hash),
             },
-            {
-              icon: "check",
-              label: "Checkout (detached)",
-              onClick: () => void doCheckout(path, menu.hash),
-            },
+            // a branch pill checks out the branch; anything else can only land on
+            // the commit, which is a detached HEAD
+            menu.ref && menu.ref.kind !== "tag"
+              ? {
+                  icon: "check",
+                  label: `Checkout ${menu.ref.name}`,
+                  onClick: () => void doCheckoutBranch(path, menu.ref!),
+                }
+              : {
+                  icon: "check",
+                  label: "Checkout (detached)",
+                  onClick: () => void doCheckout(path, menu.hash),
+                },
             {
               icon: "git-commit",
               label: "Cherry-pick onto current branch",

@@ -161,7 +161,14 @@ function ActionsTab({ path, hash, branchName }: { path: string; hash: string | n
  *  query the graph already loaded, so this costs a memo, not a fetch. */
 function LineageCard({ path, scope, hash }: { path: string; scope: string | null; hash: string }) {
   const log = useLog(path, scope);
-  const info = useMemo(() => lineage(log.data?.pages.flat() ?? [], hash), [log.data, hash]);
+  // the real branch list, so a decoration like "origin/feature/x" is ranked as the
+  // remote it is instead of being guessed at from its prefix
+  const branchList = useBranches(path);
+  const locals = useMemo(
+    () => new Set((branchList.data ?? []).filter((b) => b.kind === "local").map((b) => b.name)),
+    [branchList.data],
+  );
+  const info = useMemo(() => lineage(log.data?.pages.flat() ?? [], hash, locals), [log.data, hash, locals]);
   if (!info) return null;
 
   return (
@@ -179,6 +186,10 @@ function LineageCard({ path, scope, hash }: { path: string; scope: string | null
         <span>
           <b>{info.branch}</b>
           <span className="muted"> · {info.ownCommits === 1 ? "1 commit" : `${info.ownCommits} commits`} on this line</span>
+          {/* several refs often sit on one tip — naming only the first read as wrong */}
+          {info.alsoAt.length > 0 && (
+            <span className="muted"> · also at {info.alsoAt.join(", ")}</span>
+          )}
         </span>
       </div>
       {info.merges.length ? (

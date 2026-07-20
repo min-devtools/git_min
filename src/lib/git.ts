@@ -43,6 +43,9 @@ export const discard = (path: string, files: string[], untracked: boolean) =>
 export const commit = (path: string, message: string, amend = false) =>
   invoke<string>("commit", { path, message, amend });
 
+/** Soft-reset HEAD~1 — resolves to the undone commit's message. */
+export const undoCommit = (path: string) => invoke<string>("undo_commit", { path });
+
 export const checkout = (path: string, target: string) =>
   invoke<string>("checkout", { path, target });
 export const checkoutTracking = (path: string, remoteRef: string, localName: string) =>

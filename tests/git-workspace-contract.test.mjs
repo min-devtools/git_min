@@ -49,6 +49,9 @@ assert(
 assert(!sidebar.includes('className="side-search"'), "Repo filtering lives on Welcome, not the left dock");
 assert(welcome.includes("welcome-filter"), "Welcome must own the repository filter");
 assert(repoView.includes("matchesCommitQuery"), "⌘F in the graph must search commits");
+assert(repoView.includes('case "z":') && repoView.includes("doUndoCommit"), "z must undo the last commit (lazygit)");
+assert(actions.includes("git.undoCommit"), "doUndoCommit must soft-reset through the undo_commit command");
+assert(graphTable.includes("doCheckoutBranch"), "Right-clicking a branch pill must offer a branch checkout, not only detached");
 
 assert(inspector.includes("<WorkingTree"), "Inspector must own the Working Tree");
 assert(!sidebar.includes("<WorkingTree"), "Sidebar must not own staging");
