@@ -194,8 +194,8 @@ body {
   padding: 4px 8px;
   border: 1px solid var(--line-2);
   border-radius: 8px;
-  background: var(--glass);
-  backdrop-filter: blur(6px);
+  /* solid, not glass+blur — bar can stay pinned for a whole session and blur keeps WKWebView compositing */
+  background: var(--pane);
   color: var(--text-3);
   font-size: 0.8462rem;
   box-shadow: var(--shadow);
