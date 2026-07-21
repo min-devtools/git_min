@@ -534,6 +534,12 @@ body.left-collapsed .inspector .change-row.conflict > span.change-actions { disp
   margin-top: 2px;
   padding: 0 8px;
   color: var(--text-3);
+  cursor: default;
+  border-radius: var(--radius-sm);
+}
+.change-folder:hover {
+  color: var(--text);
+  background: var(--hover-bg);
 }
 .change-folder svg { flex: none; }
 .change-folder-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8462rem; }

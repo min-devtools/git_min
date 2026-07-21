@@ -9,8 +9,9 @@ const assert = {
   },
 };
 import {
-  branchCheckoutTarget,
   adjacentStatusSelection,
+  branchCheckoutTarget,
+  buildFolderTree,
   canSubmitPrompt,
   checkoutableBranches,
   condenseDiff,
@@ -18,7 +19,6 @@ import {
   createRepoTabDefaults,
   diffModeMatchesArea,
   diffTargetFor,
-  groupByFolder,
   hasCommitDraft,
   isBranchNotMergedError,
   isSameStatusEntry,
@@ -76,10 +76,14 @@ assert.equal(nextPanel("changes", -1), "files");
 
 assert.deepEqual(splitPath("src/ui/Icon.tsx"), { dir: "src/ui/", base: "Icon.tsx" });
 assert.deepEqual(splitPath(".gitignore"), { dir: "", base: ".gitignore" });
-assert.deepEqual(groupByFolder([...mm, conflict, untracked]).map((g) => g.dir), ["", "src/"]);
+const tree = buildFolderTree([...mm, conflict, untracked]);
+assert.deepEqual(tree.dir, "");
+assert.deepEqual(tree.entries.map((e) => e.path), ["notes.txt"]);
 assert.deepEqual(
-  groupByFolder([...mm, conflict, untracked]).map((g) => g.entries.length),
-  [1, 3],
+  tree.children.map((c) => ({ dir: c.dir, files: c.entries.map((e) => e.path), childDirs: c.children.map((cc) => cc.dir) })),
+  [
+    { dir: "src/", files: ["src/app.ts", "src/app.ts", "src/conflict.ts"], childDirs: [] },
+  ],
 );
 
 assert.equal(refName("HEAD -> main"), "main");
@@ -129,6 +133,7 @@ assert.deepEqual(createRepoTabDefaults("repo-1"), {
   amend: false,
   aiRequestId: null,
   graphScope: "HEAD",
+  collapsedFolders: [],
 });
 assert.equal(hasCommitDraft({ commitDraft: "  " }), false);
 assert.equal(hasCommitDraft({ commitDraft: "fix repository isolation" }), true);
@@ -247,10 +252,15 @@ assert.deepEqual(
   visibleStatusOrder(mixed, "flat").map((entry) => statusEntryKey(entry)),
   ["conflict:src/conflict.ts", "staged:a/early.ts", "unstaged:z/late.ts", "untracked:notes.txt"],
 );
-// tree view folder-groups within each section (root "" first), so untracked notes.txt leads
+// tree view: nested folders first, then root files, within each section
 assert.deepEqual(
   visibleStatusOrder(mixed, "tree").map((entry) => entry.path),
-  ["src/conflict.ts", "a/early.ts", "notes.txt", "z/late.ts"],
+  ["src/conflict.ts", "a/early.ts", "z/late.ts", "notes.txt"],
+);
+// collapsed folders hide their entries from keyboard navigation
+assert.deepEqual(
+  visibleStatusOrder(mixed, "tree", ["src/"]).map((entry) => entry.path),
+  ["a/early.ts", "z/late.ts", "notes.txt"],
 );
 
 console.log("gitUi: all assertions passed");

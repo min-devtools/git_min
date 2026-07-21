@@ -10,7 +10,20 @@ import {
   doUnstage,
 } from "../lib/actions";
 import { Fragment, useMemo } from "react";
-import { countPhysicalChanges, diffTargetFor, groupByFolder, isSameStatusEntry, stageableEntries, statusEntryKey } from "../lib/gitUi";
+import {
+  buildFolderTree,
+  collapseAllFolders,
+  countPhysicalChanges,
+  diffTargetFor,
+  expandAllFolders,
+  folderTreeEntryCount,
+  isFolderCollapsed,
+  isSameStatusEntry,
+  stageableEntries,
+  statusEntryKey,
+  toggleFolder,
+  type FolderTreeNode,
+} from "../lib/gitUi";
 import { useRepoInfo, useStatus, useWorktreeDiffStats } from "../lib/queries";
 import type { StatusEntry } from "../lib/types";
 import { useApp, type RepoTabUI } from "../store";
@@ -44,6 +57,8 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
   const showToast = useApp((state) => state.showToast);
   const view = useApp((state) => state.changesView);
   const setChangesView = useApp((state) => state.setChangesView);
+  const collapsedFolders = ui.collapsedFolders;
+  const setCollapsedFolders = (folders: string[]) => patchRepoTab(tabId, { collapsedFolders: folders });
   const statusQ = useStatus(path);
   const statsQ = useWorktreeDiffStats(path);
   const info = useRepoInfo(path);
@@ -67,7 +82,7 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
     });
   };
 
-  const row = (entry: StatusEntry, baseOnly: boolean) => {
+  const row = (entry: StatusEntry, depth: number) => {
     const active = isSameStatusEntry(entry, ui.selectedStatus);
     const stat = stats.get(entry.path);
     return (
@@ -75,9 +90,10 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
         role="button"
         tabIndex={0}
         key={statusEntryKey(entry)}
-        className={`index-item change-row ${baseOnly ? "nested" : ""} ${active ? "active" : ""} ${entry.area}`}
+        className={`index-item change-row ${depth > 0 ? "nested" : ""} ${active ? "active" : ""} ${entry.area}`}
         title={entry.path}
         aria-pressed={active}
+        style={{ marginLeft: `${depth * 14}px` }}
         onClick={() => selectEntry(entry)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -88,7 +104,7 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
       >
         <span className={`change-code code-${changeCode(entry).trim() || "none"}`}>{changeCode(entry)}</span>
         <Icon name={fileIcon(entry.path)} size={13} className={`change-file-icon ${fileIconTone(entry.path) ?? ""}`} />
-        <FilePath path={entry.path} baseOnly={baseOnly} />
+        <FilePath path={entry.path} baseOnly={depth > 0} />
         {stat && (
           <span className="change-stats">
             {stat.binary ? (
@@ -124,28 +140,71 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
     );
   };
 
-  // flat: full path per row (dir dims and truncates first); tree: rows grouped under folder headers
-  const rows = (list: StatusEntry[]) =>
-    view === "tree"
-      ? groupByFolder(list).map((group) => (
-          <Fragment key={group.dir || "."}>
-            {group.dir && (
-              <div className="change-folder" title={group.dir}>
+  const renderFolderTree = (node: FolderTreeNode<StatusEntry>, depth: number) => {
+    const paddingLeft = `${depth * 14 + 8}px`;
+    return (
+      <Fragment key={node.dir || "."}>
+        {node.entries.map((entry) => row(entry, depth))}
+        {node.children.map((child) => {
+          const collapsed = isFolderCollapsed(collapsedFolders, child.dir);
+          return (
+            <Fragment key={child.dir}>
+              <div
+                className={`change-folder ${collapsed ? "collapsed" : ""}`}
+                title={child.dir}
+                role="button"
+                tabIndex={0}
+                style={{ paddingLeft }}
+                onClick={() => setCollapsedFolders(toggleFolder(collapsedFolders, child.dir))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setCollapsedFolders(toggleFolder(collapsedFolders, child.dir));
+                  }
+                }}
+              >
+                <Icon name={collapsed ? "chevron-right" : "chevron-down"} size={13} />
                 <Icon name="folder" size={13} />
-                <span className="change-folder-name">{group.dir.slice(0, -1)}</span>
-                <span className="change-folder-count">{group.entries.length}</span>
+                <span className="change-folder-name">{child.name}</span>
+                <span className="change-folder-count">{folderTreeEntryCount(child)}</span>
               </div>
-            )}
-            {group.entries.map((entry) => row(entry, Boolean(group.dir)))}
-          </Fragment>
-        ))
-      : list.map((entry) => row(entry, false));
+              {!collapsed && renderFolderTree(child, depth + 1)}
+            </Fragment>
+          );
+        })}
+      </Fragment>
+    );
+  };
+
+  // flat: full path per row; tree: nested folder tree
+  const rows = (list: StatusEntry[]) =>
+    view === "tree" ? renderFolderTree(buildFolderTree(list), 0) : list.map((entry) => row(entry, 0));
 
   return (
-    <div className={`working-tree ${ui.focusedPanel === "changes" ? "panel-focused" : ""}`} onMouseDown={() => patchRepoTab(tabId, { focusedPanel: "changes" })}>
+    <div className={`working-tree ${ui.focusedPanel === "changes" ? "panel-focused" : ""}`}>
       <div className="group-title working-tree-title">
         <span>Working Tree</span>
         <span>
+          {view === "tree" && (
+            <>
+              <button
+                type="button"
+                className="group-action"
+                title="Collapse all folders"
+                onClick={() => setCollapsedFolders(collapseAllFolders(entries))}
+              >
+                <Icon name="chevrons-up" size={13} />
+              </button>
+              <button
+                type="button"
+                className="group-action"
+                title="Expand all folders"
+                onClick={() => setCollapsedFolders(expandAllFolders())}
+              >
+                <Icon name="chevrons-down" size={13} />
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="group-action"

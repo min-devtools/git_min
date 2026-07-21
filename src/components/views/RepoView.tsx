@@ -106,7 +106,7 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
       const locals = branches.filter((b) => b.kind === "local");
       const branchNames = [...locals, ...branches.filter((b) => b.kind === "remote")].map((b) => b.name);
       // walk rows in painted order, not `git status` order, or j/k jumps between sections
-      const files = visibleStatusOrder(status, s.changesView);
+      const files = visibleStatusOrder(status, s.changesView, ui.collapsedFolders);
       const currentBranch = locals.find((b) => b.head)?.name ?? "";
 
       const move = (dir: 1 | -1) => {

@@ -27,6 +27,7 @@ export function createRepoTabDefaults(repoId: string) {
     // HEAD, not all refs: --all on a repo with dozens of live branches opens one
     // rail per tip and the graph turns into a wall. "All refs" is one click away.
     graphScope: "HEAD" as string | null,
+    collapsedFolders: [] as string[],
   };
 }
 
@@ -78,18 +79,57 @@ export function prSourceBranch(branch: Pick<BranchInfo, "name" | "kind">): strin
   return branch.name;
 }
 
-/** Group entries by parent folder, folders sorted, root ("") first. */
-export function groupByFolder<T extends { path: string }>(entries: readonly T[]): { dir: string; entries: T[] }[] {
-  const map = new Map<string, T[]>();
+export type FolderTreeNode<T extends { path: string }> = {
+  dir: string;
+  name: string;
+  entries: T[];
+  children: FolderTreeNode<T>[];
+};
+
+/** Build a nested folder tree from file paths. Root node has dir="" and name="".
+ *  Children (subfolders) are sorted alphabetically, then entries (files directly in
+ *  that folder). */
+export function buildFolderTree<T extends { path: string }>(entries: readonly T[]): FolderTreeNode<T> {
+  const root: FolderTreeNode<T> = { dir: "", name: "", entries: [], children: [] };
   for (const entry of entries) {
-    const { dir } = splitPath(entry.path);
-    const bucket = map.get(dir);
-    if (bucket) bucket.push(entry);
-    else map.set(dir, [entry]);
+    const parts = entry.path.split("/");
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const dir = parts.slice(0, i + 1).join("/") + "/";
+      let child = node.children.find((c) => c.dir === dir);
+      if (!child) {
+        child = { dir, name: parts[i]!, entries: [], children: [] };
+        node.children.push(child);
+      }
+      node = child;
+    }
+    node.entries.push(entry);
   }
-  return [...map.entries()]
-    .map(([dir, grouped]) => ({ dir, entries: grouped }))
-    .sort((a, b) => a.dir.localeCompare(b.dir));
+  const sort = (n: FolderTreeNode<T>) => {
+    n.children.sort((a, b) => a.name.localeCompare(b.name));
+    n.entries.sort((a, b) => a.path.localeCompare(b.path));
+    n.children.forEach(sort);
+  };
+  sort(root);
+  return root;
+}
+
+export function folderTreeEntryCount<T extends { path: string }>(node: FolderTreeNode<T>): number {
+  return node.entries.length + node.children.reduce((sum, child) => sum + folderTreeEntryCount(child), 0);
+}
+
+function collectVisibleEntries<T extends { path: string }>(
+  node: FolderTreeNode<T>,
+  collapsedFolders: readonly string[],
+): T[] {
+  const result: T[] = [];
+  for (const child of node.children) {
+    if (!isFolderCollapsed(collapsedFolders, child.dir)) {
+      result.push(...collectVisibleEntries(child, collapsedFolders));
+    }
+  }
+  result.push(...node.entries);
+  return result;
 }
 
 /** stash mode: file carries the stash id (stash@{n}), label its message. */
@@ -163,12 +203,40 @@ export function stageableEntries(entries: StatusEntry[]): StatusEntry[] {
   return entries.filter((entry) => entry.area === "unstaged" || entry.area === "untracked");
 }
 
+export function isFolderCollapsed(collapsedFolders: readonly string[], dir: string): boolean {
+  return collapsedFolders.includes(dir);
+}
+
+export function toggleFolder(collapsedFolders: readonly string[], dir: string): string[] {
+  return collapsedFolders.includes(dir) ? collapsedFolders.filter((d) => d !== dir) : [...collapsedFolders, dir];
+}
+
+export function collapseAllFolders<T extends { path: string }>(entries: readonly T[]): string[] {
+  const set = new Set<string>();
+  for (const entry of entries) {
+    const parts = entry.path.split("/");
+    for (let i = 0; i < parts.length - 1; i++) {
+      set.add(parts.slice(0, i + 1).join("/") + "/");
+    }
+  }
+  return [...set];
+}
+
+export function expandAllFolders(): string[] {
+  return [];
+}
+
 /** Rows in the exact order the Working Tree paints them: Conflicts, Staged, Unstaged,
  *  each folder-grouped in tree view. j/k must walk this — raw `git status` order sends
- *  the cursor jumping between sections (a staged file listed last renders first). */
-export function visibleStatusOrder(entries: StatusEntry[], view: "flat" | "tree"): StatusEntry[] {
+ *  the cursor jumping between sections (a staged file listed last renders first).
+ *  Folders in `collapsedFolders` are skipped so keyboard navigation matches the paint. */
+export function visibleStatusOrder(
+  entries: StatusEntry[],
+  view: "flat" | "tree",
+  collapsedFolders: readonly string[] = [],
+): StatusEntry[] {
   const section = (list: StatusEntry[]) =>
-    view === "tree" ? groupByFolder(list).flatMap((group) => group.entries) : list;
+    view === "tree" ? collectVisibleEntries(buildFolderTree(list), collapsedFolders) : list;
   return [
     ...section(entries.filter((entry) => entry.area === "conflict")),
     ...section(entries.filter((entry) => entry.area === "staged")),

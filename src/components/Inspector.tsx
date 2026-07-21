@@ -9,7 +9,16 @@ import {
   doAddRemote, doCheckout, doCheckoutBranch, doCherryPick, doCreateBranch, doDeleteBranch,
   doFetch, doMerge, doPasteCherryPicks, doPull, doPush, doRebase, doRemoveRemote, doSetRemoteUrl, openOnRemote,
 } from "../lib/actions";
-import { groupByFolder, prSourceBranch } from "../lib/gitUi";
+import {
+  buildFolderTree,
+  collapseAllFolders,
+  expandAllFolders,
+  folderTreeEntryCount,
+  isFolderCollapsed,
+  prSourceBranch,
+  toggleFolder,
+  type FolderTreeNode,
+} from "../lib/gitUi";
 import type { FileStat } from "../lib/types";
 import { fileIcon, fileIconTone, Icon } from "../ui/Icon";
 import { FilePath } from "../ui/FilePath";
@@ -224,16 +233,19 @@ export function Inspector() {
 
   if (!repoTab || !ui || !repo) return <aside className="inspector" />;
   const tab = ui.inspectorTab;
+  const collapsedFolders = ui.collapsedFolders;
+  const setCollapsedFolders = (folders: string[]) => patchRepoTab(repoTab.tabId, { collapsedFolders: folders });
 
-  const fileRow = (f: FileStat, nested: boolean) => {
+  const fileRow = (f: FileStat, depth: number) => {
     const active = ui.diff && (ui.diff as { file?: string }).file === f.path;
     return (
       <div
         role="button"
         tabIndex={0}
         key={f.path}
-        className={`index-item file-row ${nested ? "nested" : ""} ${active ? "active" : ""}`}
+        className={`index-item file-row ${depth > 0 ? "nested" : ""} ${active ? "active" : ""}`}
         title={f.path}
+        style={{ marginLeft: `${depth * 14}px` }}
         onClick={() =>
           patchRepoTab(repoTab.tabId, {
             diff: { mode: "commit", hash: ui.selectedCommit!, file: f.path },
@@ -248,7 +260,7 @@ export function Inspector() {
         }}
       >
         <Icon name={fileIcon(f.path)} size={13} className={`change-file-icon ${fileIconTone(f.path) ?? ""}`} />
-        <FilePath path={f.path} baseOnly={nested} />
+        <FilePath path={f.path} baseOnly={depth > 0} />
         {f.binary ? (
           <span className="muted">bin</span>
         ) : (
@@ -268,7 +280,7 @@ export function Inspector() {
   return (
     <aside
       className={`inspector ${ui.focusedPanel === "files" ? "panel-focused" : ""}`}
-      onMouseDown={() => patchRepoTab(repoTab.tabId, { focusedPanel: tab === "changes" ? "changes" : "files" })}
+      onClick={() => patchRepoTab(repoTab.tabId, { focusedPanel: tab === "changes" ? "changes" : "files" })}
     >
       <div className="inspector-head">
         <div className="doc-title">
@@ -333,6 +345,26 @@ export function Inspector() {
                   <div className="group-title">
                     <span>Files</span>
                     <span>
+                      {changesView === "tree" && (
+                        <>
+                          <button
+                            type="button"
+                            className="group-action"
+                            title="Collapse all folders"
+                            onClick={() => setCollapsedFolders(collapseAllFolders(detail.data.files))}
+                          >
+                            <Icon name="chevrons-up" size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="group-action"
+                            title="Expand all folders"
+                            onClick={() => setCollapsedFolders(expandAllFolders())}
+                          >
+                            <Icon name="chevrons-down" size={13} />
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         className="group-action"
@@ -345,19 +377,45 @@ export function Inspector() {
                     </span>
                   </div>
                   {changesView === "tree"
-                    ? groupByFolder(detail.data.files).map((group) => (
-                        <Fragment key={group.dir || "."}>
-                          {group.dir && (
-                            <div className="change-folder" title={group.dir}>
-                              <Icon name="folder" size={13} />
-                              <span className="change-folder-name">{group.dir.slice(0, -1)}</span>
-                              <span className="change-folder-count">{group.entries.length}</span>
-                            </div>
-                          )}
-                          {group.entries.map((f) => fileRow(f, Boolean(group.dir)))}
-                        </Fragment>
-                      ))
-                    : detail.data.files.map((f) => fileRow(f, false))}
+                    ? (() => {
+                        const renderFolderTree = (node: FolderTreeNode<FileStat>, depth: number) => {
+                          const paddingLeft = `${depth * 14 + 8}px`;
+                          return (
+                            <Fragment key={node.dir || "."}>
+                              {node.entries.map((f) => fileRow(f, depth))}
+                              {node.children.map((child) => {
+                                const collapsed = isFolderCollapsed(collapsedFolders, child.dir);
+                                return (
+                                  <Fragment key={child.dir}>
+                                    <div
+                                      className={`change-folder ${collapsed ? "collapsed" : ""}`}
+                                      title={child.dir}
+                                      role="button"
+                                      tabIndex={0}
+                                      style={{ paddingLeft }}
+                                      onClick={() => setCollapsedFolders(toggleFolder(collapsedFolders, child.dir))}
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter" || event.key === " ") {
+                                          event.preventDefault();
+                                          setCollapsedFolders(toggleFolder(collapsedFolders, child.dir));
+                                        }
+                                      }}
+                                    >
+                                      <Icon name={collapsed ? "chevron-right" : "chevron-down"} size={13} />
+                                      <Icon name="folder" size={13} />
+                                      <span className="change-folder-name">{child.name}</span>
+                                      <span className="change-folder-count">{folderTreeEntryCount(child)}</span>
+                                    </div>
+                                    {!collapsed && renderFolderTree(child, depth + 1)}
+                                  </Fragment>
+                                );
+                              })}
+                            </Fragment>
+                          );
+                        };
+                        return renderFolderTree(buildFolderTree(detail.data.files), 0);
+                      })()
+                    : detail.data.files.map((f) => fileRow(f, 0))}
                 </div>
               ) : null
             ) : (

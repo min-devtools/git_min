@@ -70,6 +70,8 @@ export interface RepoTabUI {
   aiRequestId: string | null;
   /** null means all refs; otherwise graph is scoped to this branch/ref */
   graphScope: string | null;
+  /** folder paths (with trailing slash) collapsed in tree view */
+  collapsedFolders: string[];
 }
 
 function repoTabId(repoId: string): string {
