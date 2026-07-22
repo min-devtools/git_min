@@ -108,8 +108,8 @@ function StashRow({ stash, path, tabId, ui, full }: { stash: StashInfo; path: st
       <span className="resource-label">{stash.message}</span>
       <span className="resource-meta">{timeAgo(stash.time)}</span>
       <span className="resource-actions">
-        <button title="Apply and keep stash" aria-label={`Apply ${stash.id}`} onClick={(event) => { event.stopPropagation(); void doStashOp(path, stash.id, "apply"); }}>apply</button>
-        {full && <button title="Apply and drop stash" aria-label={`Pop ${stash.id}`} onClick={(event) => { event.stopPropagation(); void doStashOp(path, stash.id, "pop"); }}>pop</button>}
+        <button title="Apply and keep stash" aria-label={`Apply ${stash.id}`} onClick={(event) => { event.stopPropagation(); void doStashOp(path, stash.id, "apply"); }}><Icon name="download" size={12} /></button>
+        {full && <button title="Apply and drop stash" aria-label={`Pop ${stash.id}`} onClick={(event) => { event.stopPropagation(); void doStashOp(path, stash.id, "pop"); }}><Icon name="check" size={12} /></button>}
         <button title="Drop stash" aria-label={`Drop ${stash.id}`} onClick={(event) => { event.stopPropagation(); void doStashOp(path, stash.id, "drop"); }}><Icon name="trash" size={12} /></button>
       </span>
     </div>

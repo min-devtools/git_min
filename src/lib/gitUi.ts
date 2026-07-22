@@ -79,6 +79,16 @@ export function prSourceBranch(branch: Pick<BranchInfo, "name" | "kind">): strin
   return branch.name;
 }
 
+/** Prefer origin when a commit carries multiple branch decorations. */
+export function prBranchFromCommitRefs(refs: readonly string[], remoteBranches: ReadonlySet<string> = new Set()): string | null {
+  const branches = refs
+    .filter((ref) => !ref.startsWith("tag: ") && ref !== "HEAD")
+    .map(refName);
+  const ref = branches.find((branch) => branch.startsWith("origin/")) ?? branches[0];
+  if (!ref) return null;
+  return remoteBranches.has(ref) ? prSourceBranch({ name: ref, kind: "remote" }) : ref.startsWith("origin/") ? ref.slice("origin/".length) : ref;
+}
+
 export type FolderTreeNode<T extends { path: string }> = {
   dir: string;
   name: string;
@@ -132,18 +142,24 @@ function collectVisibleEntries<T extends { path: string }>(
   return result;
 }
 
-/** stash mode: file carries the stash id (stash@{n}), label its message. */
+/** stash mode: file carries the stash id (stash@{n}), label its message.
+ *  conflict mode: the merge editor reads the raw worktree file, not a diff. */
 export type DiffTarget = {
-  mode: "commit" | "staged" | "worktree" | "untracked" | "stash";
+  mode: "commit" | "staged" | "worktree" | "untracked" | "stash" | "conflict";
   file: string;
   hash?: string;
   label?: string;
 };
 
-/** The diff a Working Tree row opens — staged reads the index, the rest the worktree. */
+/** The diff a Working Tree row opens — staged reads the index, conflicts open
+ *  the merge editor, the rest the worktree. */
 export function diffTargetFor(entry: StatusSelection): DiffTarget {
   return {
-    mode: entry.area === "untracked" ? "untracked" : entry.area === "staged" ? "staged" : "worktree",
+    mode:
+      entry.area === "conflict" ? "conflict"
+      : entry.area === "untracked" ? "untracked"
+      : entry.area === "staged" ? "staged"
+      : "worktree",
     file: entry.path,
   };
 }
@@ -152,7 +168,23 @@ export function diffTargetFor(entry: StatusSelection): DiffTarget {
 export function diffModeMatchesArea(mode: DiffTarget["mode"], area: StatusEntry["area"]): boolean {
   if (mode === "staged") return area === "staged";
   if (mode === "untracked") return area === "untracked";
-  return area === "unstaged" || area === "conflict";
+  if (mode === "conflict") return area === "conflict";
+  return area === "unstaged";
+}
+
+/** Merge-editor side names — during a rebase git swaps ours/theirs semantics. */
+export function resolutionLabels(info: { rebasing?: boolean; cherryPicking?: boolean } | undefined) {
+  if (info?.rebasing) {
+    return {
+      ours: "Base",
+      theirs: "Replayed commit",
+      title: "During rebase: Base is the branch being rebased onto; Replayed commit is your commit being applied.",
+    };
+  }
+  if (info?.cherryPicking) {
+    return { ours: "Current branch", theirs: "Picked commit", title: "Choose which side should replace the file, then GitMin stages it as resolved." };
+  }
+  return { ours: "Current branch", theirs: "Incoming branch", title: "Choose which side should replace the file, then GitMin stages it as resolved." };
 }
 
 /** After a mutation moved files between index areas, retarget the open diff and the

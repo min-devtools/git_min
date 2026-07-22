@@ -381,7 +381,8 @@ export function Inspector() {
                         const renderFolderTree = (node: FolderTreeNode<FileStat>, depth: number) => {
                           const paddingLeft = `${depth * 14 + 8}px`;
                           return (
-                            <Fragment key={node.dir || "."}>
+                            // keyless on purpose — see WorkingTree.renderFolderTree
+                            <Fragment>
                               {node.entries.map((f) => fileRow(f, depth))}
                               {node.children.map((child) => {
                                 const collapsed = isFolderCollapsed(collapsedFolders, child.dir);

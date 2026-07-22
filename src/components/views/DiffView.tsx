@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useApp } from "../../store";
-import { useBlame, useDiff } from "../../lib/queries";
+import { useBlame, useConflictFile, useDiff, useRepoInfo } from "../../lib/queries";
 import { escapeHtml, shortHash, timeAgo } from "../../lib/format";
 import { extOf } from "../../lib/highlight";
 import { highlightSourceLines } from "../../lib/treeSitterHighlight";
-import { buildHunkPatch, parseUnifiedDiff, type DiffCell, type DiffInlineLine } from "../../lib/diffModel";
+import { buildPatchForHunk, parseUnifiedDiff, splitDiffHunk, type DiffCell, type DiffHunk, type DiffInlineLine } from "../../lib/diffModel";
+import { parseConflicts, resolveConflictText, type ConflictChoice, type ConflictModel } from "../../lib/conflictModel";
+import { resolutionLabels } from "../../lib/gitUi";
 import { openRepoFile } from "../../lib/editor";
-import { doApplyHunk, doCherryPick, doCreateBranch, openOnRemote } from "../../lib/actions";
+import { doApplyHunk, doCherryPick, doCreateBranch, doMarkResolved, doResolve, doSaveConflictResolution, openOnRemote } from "../../lib/actions";
 import { fileIcon, fileIconTone, Icon } from "../../ui/Icon";
 import { SectionVeil } from "../../ui/SectionVeil";
 import { ToolButton } from "../../ui/ToolButton";
@@ -56,7 +58,7 @@ function SplitCell({ side, cell, html }: { side: "old" | "new"; cell: DiffCell |
 }
 
 function DiffBody({
-  text, file, wrap, layout, onHunk, hunkLabel,
+  text, file, wrap, layout, onHunk, hunkLabel, allowHunkSplit,
 }: {
   text: string;
   file: string;
@@ -64,19 +66,44 @@ function DiffBody({
   layout: "split" | "inline";
   onHunk?: (patch: string) => void;
   hunkLabel?: string;
+  allowHunkSplit?: boolean;
 }) {
   const model = useMemo(() => parseUnifiedDiff(text), [text]);
   const oldHtml = useTreeSitterLines(model.oldSourceLines, file);
   const newHtml = useTreeSitterLines(model.newSourceLines, file);
+  const [splitHunkKeys, setSplitHunkKeys] = useState<Set<string>>(() => new Set());
+  const displayHunks = useMemo(() => model.hunks.flatMap((hunk, hunkIndex) => {
+    const splitKey = hunk.rawLines.join("\n");
+    const children = allowHunkSplit ? splitDiffHunk(hunk) : [hunk];
+    const expanded = children.length > 1 && splitHunkKeys.has(splitKey);
+    return (expanded ? children : [hunk]).map((displayHunk, partIndex) => ({
+      hunk: displayHunk,
+      key: `${hunkIndex}:${partIndex}:${displayHunk.header}`,
+      splitKey,
+      splitCount: expanded ? 1 : children.length,
+    }));
+  }), [allowHunkSplit, model, splitHunkKeys]);
   if (!text.trim()) return <div className="empty-note">No changes.</div>;
 
-  const HunkHeader = ({ index }: { index: number }) => (
+  const HunkHeader = ({ hunk, splitKey, splitCount }: { hunk: DiffHunk; splitKey: string; splitCount: number }) => (
     <div className="diff-hunk-head">
-      <span>{model.hunks[index].header}</span>
+      <span>{hunk.header}</span>
       {onHunk && (
-        <button type="button" className="hunk-action" onClick={() => onHunk(buildHunkPatch(model, index))}>
-          {hunkLabel}
-        </button>
+        <span className="hunk-actions">
+          {splitCount > 1 && (
+            <button
+              type="button"
+              className="hunk-action split"
+              title={`Split into ${splitCount} stageable hunks`}
+              onClick={() => setSplitHunkKeys((current) => new Set(current).add(splitKey))}
+            >
+              Split
+            </button>
+          )}
+          <button type="button" className="hunk-action" onClick={() => onHunk(buildPatchForHunk(model, hunk))}>
+            {hunkLabel}
+          </button>
+        </span>
       )}
     </div>
   );
@@ -84,9 +111,9 @@ function DiffBody({
   if (layout === "split") {
     return (
       <div className={`diff-body diff-split ${wrap ? "wrap" : ""}`}>
-        {model.hunks.map((hunk, hunkIndex) => (
-          <section className="diff-hunk" key={`${hunk.header}-${hunkIndex}`}>
-            <HunkHeader index={hunkIndex} />
+        {displayHunks.map(({ hunk, key, splitKey, splitCount }) => (
+          <section className="diff-hunk" key={key}>
+            <HunkHeader hunk={hunk} splitKey={splitKey} splitCount={splitCount} />
             <div className="diff-split-labels" aria-hidden="true"><span>Before</span><span>After</span></div>
             {hunk.split.map((row, rowIndex) => (
               <div className={`diff-split-row ${row.kind}`} key={rowIndex}>
@@ -102,9 +129,9 @@ function DiffBody({
 
   return (
     <div className={`diff-body diff-inline ${wrap ? "wrap" : ""}`}>
-      {model.hunks.map((hunk, hunkIndex) => (
-        <section className="diff-hunk" key={`${hunk.header}-${hunkIndex}`}>
-          <HunkHeader index={hunkIndex} />
+      {displayHunks.map(({ hunk, key, splitKey, splitCount }) => (
+        <section className="diff-hunk" key={key}>
+          <HunkHeader hunk={hunk} splitKey={splitKey} splitCount={splitCount} />
           {hunk.inline.map((line, lineIndex) => (
             <InlineRow
               key={lineIndex}
@@ -115,6 +142,81 @@ function DiffBody({
           ))}
         </section>
       ))}
+    </div>
+  );
+}
+
+type ConflictRow = {
+  num: number;
+  kind: "text" | "ours" | "base" | "theirs" | "marker-ours" | "marker-base" | "marker-sep" | "marker-theirs";
+  text: string;
+  codeIndex: number | null;
+  conflict: number | null;
+};
+
+/** VS Code-style merge editor body: the whole file with each conflict block
+ *  rendered as Current/Incoming sections plus per-block accept actions. */
+function ConflictBody({ model, file, wrap, labels, onAccept }: {
+  model: ConflictModel;
+  file: string;
+  wrap: boolean;
+  labels: { ours: string; theirs: string; title: string };
+  onAccept: (index: number, choice: ConflictChoice) => void;
+}) {
+  const { rows, code } = useMemo(() => {
+    const rows: ConflictRow[] = [];
+    const code: string[] = [];
+    let num = 1;
+    let conflict = -1;
+    const push = (kind: ConflictRow["kind"], text: string, highlightable: boolean, c: number | null) =>
+      rows.push({ num: num++, kind, text, codeIndex: highlightable ? code.push(text) - 1 : null, conflict: c });
+    for (const seg of model.segments) {
+      if (seg.kind === "text") {
+        for (const line of seg.lines) push("text", line, true, null);
+        continue;
+      }
+      conflict++;
+      push("marker-ours", `<<<<<<< ${seg.oursLabel}`.trimEnd(), false, conflict);
+      for (const line of seg.ours) push("ours", line, true, conflict);
+      if (seg.base) {
+        push("marker-base", `||||||| ${seg.baseLabel}`.trimEnd(), false, conflict);
+        for (const line of seg.base) push("base", line, true, conflict);
+      }
+      push("marker-sep", "=======", false, conflict);
+      for (const line of seg.theirs) push("theirs", line, true, conflict);
+      push("marker-theirs", `>>>>>>> ${seg.theirsLabel}`.trimEnd(), false, conflict);
+    }
+    return { rows, code };
+  }, [model]);
+  const highlighted = useTreeSitterLines(code, file);
+
+  return (
+    <div className={`diff-body conflict-body ${wrap ? "wrap" : ""}`}>
+      {rows.map((row, i) => (
+        <Fragment key={i}>
+          {row.kind === "marker-ours" && (
+            <div className="conflict-actions" title={labels.title}>
+              <button type="button" onClick={() => onAccept(row.conflict!, "ours")}>Accept {labels.ours}</button>
+              <button type="button" onClick={() => onAccept(row.conflict!, "theirs")}>Accept {labels.theirs}</button>
+              <button type="button" onClick={() => onAccept(row.conflict!, "both")}>Accept Both</button>
+            </div>
+          )}
+          <span className={`diff-line conflict-line ${row.kind}`}>
+            <span className="diff-gutter">{row.num}</span>
+            <i className="diff-marker" aria-hidden="true"> </i>
+            {row.codeIndex === null ? (
+              <code className="diff-code conflict-marker-text">
+                {row.text}
+                {row.kind === "marker-ours" && <em className="conflict-side-chip ours">{labels.ours}</em>}
+                {row.kind === "marker-theirs" && <em className="conflict-side-chip theirs">{labels.theirs}</em>}
+              </code>
+            ) : (
+              <LineCode html={highlighted[row.codeIndex]} />
+            )}
+          </span>
+        </Fragment>
+      ))}
+      {rows.length === 0 && <div className="empty-note">Empty file.</div>}
     </div>
   );
 }
@@ -176,8 +278,15 @@ export function DiffView({ tabId, repoTabId, active }: { tabId: string; repoTabI
     showToast: s.showToast,
   })));
   const path = repo?.path;
+  const conflictMode = !ui?.blame && ui?.diff?.mode === "conflict";
   const diff = useDiff(active ? path : undefined, ui?.diff ?? null);
   const blameQ = useBlame(active ? path : undefined, ui?.blame ?? null);
+  const conflictQ = useConflictFile(active && conflictMode ? path : undefined, conflictMode ? ui!.diff!.file : null);
+  const repoInfoQ = useRepoInfo(active && conflictMode ? path : undefined);
+  const conflictModel = useMemo(
+    () => (conflictMode && conflictQ.data != null ? parseConflicts(conflictQ.data) : null),
+    [conflictMode, conflictQ.data],
+  );
   const [selectedBlame, setSelectedBlame] = useState<{ index: number; line: BlameLine } | null>(null);
   const [narrow, setNarrow] = useState(false);
   const viewRef = useRef<HTMLElement>(null);
@@ -213,11 +322,23 @@ export function DiffView({ tabId, repoTabId, active }: { tabId: string; repoTabI
   const hunkMode = ui.diff?.mode === "worktree" ? "stage" : ui.diff?.mode === "staged" ? "unstage" : null;
   const mode = ui.diff?.mode;
   const stash = !ui.blame && mode === "stash";
-  const modeLabel = ui.blame ? "Blame" : mode === "commit" ? shortHash(ui.diff!.hash ?? "") : mode === "staged" ? "Staged" : mode === "untracked" ? "New file" : mode === "stash" ? "Stash" : "Working tree";
+  const modeLabel = ui.blame ? "Blame" : mode === "commit" ? shortHash(ui.diff!.hash ?? "") : mode === "staged" ? "Staged" : mode === "untracked" ? "New file" : mode === "stash" ? "Stash" : mode === "conflict" ? "Conflict" : "Working tree";
   const layout = narrow ? "inline" : diffLayout;
   const model = diff.data ? parseUnifiedDiff(diff.data) : null;
   const changedLine = model?.hunks.flatMap((hunk) => hunk.inline).find((line) => line.kind !== "context");
-  const openLine = changedLine?.newNumber ?? changedLine?.oldNumber ?? 1;
+  const labels = resolutionLabels(repoInfoQ.data);
+  const conflictCount = conflictModel?.conflictCount ?? 0;
+  // first marker line — "Open file" should land the editor on the conflict
+  const firstConflictLine = (() => {
+    if (!conflictModel || !conflictCount) return null;
+    let n = 1;
+    for (const seg of conflictModel.segments) {
+      if (seg.kind !== "text") return n;
+      n += seg.lines.length;
+    }
+    return null;
+  })();
+  const openLine = firstConflictLine ?? changedLine?.newNumber ?? changedLine?.oldNumber ?? 1;
   const churn = (() => {
     if (ui.blame || !model) return null;
     let added = 0;
@@ -248,7 +369,7 @@ export function DiffView({ tabId, repoTabId, active }: { tabId: string; repoTabI
         </span>
         <span className="diff-view-actions">
           <ToolButton className="diff-open-file" onClick={openFile}><Icon name="pencil" /> Open file</ToolButton>
-          {!ui.blame && (
+          {!ui.blame && !conflictMode && (
             <ToolButton
               iconOnly
               className="diff-layout-toggle"
@@ -263,7 +384,7 @@ export function DiffView({ tabId, repoTabId, active }: { tabId: string; repoTabI
           )}
           <span className="seg">
             <ToolButton iconOnly className={diffWrap ? "active" : ""} title={diffWrap ? "Unwrap long lines" : "Wrap long lines"} onClick={toggleDiffWrap}><Icon name="wrap" /></ToolButton>
-            {!stash && <ToolButton iconOnly title={ui.blame ? "Back to diff" : "Blame this file"} onClick={() => patchRepoTab(repoTabId, { blame: ui.blame ? null : file })}><Icon name="history" /></ToolButton>}
+            {!stash && !conflictMode && <ToolButton iconOnly title={ui.blame ? "Back to diff" : "Blame this file"} onClick={() => patchRepoTab(repoTabId, { blame: ui.blame ? null : file })}><Icon name="history" /></ToolButton>}
             <ToolButton iconOnly title="Copy path" onClick={() => void writeText(file)}><Icon name="copy" /></ToolButton>
             <ToolButton iconOnly title="Close (Esc)" onClick={() => void closeTab(tabId)}><Icon name="x" /></ToolButton>
           </span>
@@ -283,11 +404,61 @@ export function DiffView({ tabId, repoTabId, active }: { tabId: string; repoTabI
             </span>
           </div>
         )}
-        <SectionVeil on={ui.blame ? blameQ.isLoading : diff.isLoading} />
+        {conflictMode && !conflictModel && conflictQ.isError && (
+          <div className="conflict-bar">
+            <span className="conflict-bar-label">
+              <Icon name="git-merge" size={14} />
+              <strong>Conflict</strong>
+              <span>Content can’t be shown here — take a side, or resolve externally and mark resolved.</span>
+            </span>
+            <span className="conflict-bar-actions">
+              <ToolButton title={`Replace the whole file with ${labels.ours}. ${labels.title}`} onClick={() => void doResolve(repo.path, file, "ours")}>Take all: {labels.ours}</ToolButton>
+              <ToolButton title={`Replace the whole file with ${labels.theirs}. ${labels.title}`} onClick={() => void doResolve(repo.path, file, "theirs")}>Take all: {labels.theirs}</ToolButton>
+              <ToolButton onClick={() => void doMarkResolved(repo.path, file)}><Icon name="check" /> Mark resolved</ToolButton>
+            </span>
+          </div>
+        )}
+        {conflictMode && conflictModel && (
+          <div className="conflict-bar">
+            {conflictCount > 0 ? (
+              <>
+                <span className="conflict-bar-label">
+                  <Icon name="git-merge" size={14} />
+                  <strong>{conflictCount} conflict{conflictCount === 1 ? "" : "s"}</strong>
+                  <span>Accept a side per block, or take one side for the whole file.</span>
+                </span>
+                <span className="conflict-bar-actions">
+                  <ToolButton title={`Replace the whole file with ${labels.ours}. ${labels.title}`} onClick={() => void doResolve(repo.path, file, "ours")}>Take all: {labels.ours}</ToolButton>
+                  <ToolButton title={`Replace the whole file with ${labels.theirs}. ${labels.title}`} onClick={() => void doResolve(repo.path, file, "theirs")}>Take all: {labels.theirs}</ToolButton>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="conflict-bar-label resolved">
+                  <Icon name="check" size={14} />
+                  <strong>All conflicts resolved</strong>
+                  <span>Mark the file resolved to stage it.</span>
+                </span>
+                <span className="conflict-bar-actions">
+                  <ToolButton variant="primary" onClick={() => void doMarkResolved(repo.path, file)}><Icon name="check" /> Mark resolved</ToolButton>
+                </span>
+              </>
+            )}
+          </div>
+        )}
+        <SectionVeil on={ui.blame ? blameQ.isLoading : conflictMode ? conflictQ.isLoading : diff.isLoading} />
         {ui.blame ? blameQ.isLoading ? null : blameQ.isError ? <div className="empty-note">{String(blameQ.error)}</div> : (
           <BlameBody blame={blameQ.data ?? []} file={ui.blame} wrap={diffWrap} selected={selectedBlame?.index ?? null} onSelect={(index, line) => setSelectedBlame({ index, line })} />
+        ) : conflictMode ? conflictQ.isLoading ? null : conflictQ.isError ? <div className="empty-note">{String(conflictQ.error)}</div> : conflictModel && (
+          <ConflictBody
+            model={conflictModel}
+            file={file}
+            wrap={diffWrap}
+            labels={labels}
+            onAccept={(index, choice) => void doSaveConflictResolution(repo.path, file, resolveConflictText(conflictModel, index, choice))}
+          />
         ) : diff.isLoading ? null : diff.isError ? <div className="empty-note">{String(diff.error)}</div> : (
-          <DiffBody text={diff.data ?? ""} file={ui.diff!.file} wrap={diffWrap} layout={layout} onHunk={hunkMode ? (patch) => void doApplyHunk(repo.path, patch, hunkMode === "unstage") : undefined} hunkLabel={hunkMode === "stage" ? "Stage hunk" : "Unstage hunk"} />
+          <DiffBody text={diff.data ?? ""} file={ui.diff!.file} wrap={diffWrap} layout={layout} onHunk={hunkMode ? (patch) => void doApplyHunk(repo.path, patch, hunkMode === "unstage") : undefined} hunkLabel={hunkMode === "stage" ? "Stage hunk" : "Unstage hunk"} allowHunkSplit={hunkMode === "stage"} />
         )}
       </div>
     </section>

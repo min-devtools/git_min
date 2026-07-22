@@ -134,8 +134,65 @@ export function parseUnifiedDiff(text: string): UnifiedDiffModel {
   return { headers, hunks, oldSourceLines, newSourceLines };
 }
 
+function hunkRawSegments(hunk: DiffHunk): string[][] {
+  const segments: string[][] = [];
+  for (const raw of hunk.rawLines.slice(1)) {
+    if (raw.startsWith("\\ No newline at end of file")) {
+      segments[segments.length - 1]?.push(raw);
+    } else {
+      segments.push([raw]);
+    }
+  }
+  return segments;
+}
+
+function formatHunkRange(start: number, count: number): string {
+  return count === 1 ? String(start) : `${start},${count}`;
+}
+
+function splitHunkHeader(hunk: DiffHunk, lines: DiffInlineLine[]): string {
+  const oldLines = lines.filter((line) => line.oldNumber !== null);
+  const newLines = lines.filter((line) => line.newNumber !== null);
+  const oldStart = oldLines[0]?.oldNumber ?? 0;
+  const newStart = newLines[0]?.newNumber ?? 0;
+  const suffix = /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@(.*)$/.exec(hunk.header)?.[1] ?? "";
+  return `@@ -${formatHunkRange(oldStart, oldLines.length)} +${formatHunkRange(newStart, newLines.length)} @@${suffix}`;
+}
+
+export function splitDiffHunk(hunk: DiffHunk): DiffHunk[] {
+  const changes: Array<{ start: number; end: number }> = [];
+  for (let index = 0; index < hunk.inline.length;) {
+    if (hunk.inline[index].kind === "context") {
+      index++;
+      continue;
+    }
+    const start = index;
+    while (index < hunk.inline.length && hunk.inline[index].kind !== "context") index++;
+    changes.push({ start, end: index });
+  }
+  if (changes.length < 2) return [hunk];
+
+  const rawSegments = hunkRawSegments(hunk);
+  return changes.map((_, index) => {
+    const start = index === 0 ? 0 : changes[index - 1].end;
+    const end = index === changes.length - 1 ? hunk.inline.length : changes[index + 1].start;
+    const inline = hunk.inline.slice(start, end);
+    const header = splitHunkHeader(hunk, inline);
+    return {
+      header,
+      inline,
+      split: splitRows(inline),
+      rawLines: [header, ...rawSegments.slice(start, end).flat()],
+    };
+  });
+}
+
+export function buildPatchForHunk(model: UnifiedDiffModel, hunk: DiffHunk): string {
+  return [...model.headers, ...hunk.rawLines].join("\n") + "\n";
+}
+
 export function buildHunkPatch(model: UnifiedDiffModel, hunkIndex: number): string {
   const hunk = model.hunks[hunkIndex];
   if (!hunk) return "";
-  return [...model.headers, ...hunk.rawLines].join("\n") + "\n";
+  return buildPatchForHunk(model, hunk);
 }

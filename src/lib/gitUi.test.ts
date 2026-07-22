@@ -25,6 +25,7 @@ import {
   nextPanel,
   pageOffset,
   previewItems,
+  prBranchFromCommitRefs,
   prSourceBranch,
   queryGroupsForMutation,
   refName,
@@ -92,6 +93,10 @@ assert.equal(refName("origin/feature/payments"), "origin/feature/payments");
 assert.equal(prSourceBranch({ name: "feature/payments", kind: "local" }), "feature/payments");
 assert.equal(prSourceBranch({ name: "origin/feature/payments", kind: "remote" }), "feature/payments");
 assert.equal(prSourceBranch({ name: "v1.2.0", kind: "tag" }), null);
+assert.equal(prBranchFromCommitRefs(["feature/payments", "upstream/feature/payments", "origin/feature/payments"]), "feature/payments");
+assert.equal(prBranchFromCommitRefs(["HEAD -> feature/payments", "tag: v1.2.0"]), "feature/payments");
+assert.equal(prBranchFromCommitRefs(["upstream/feature/payments"], new Set(["upstream/feature/payments"])), "feature/payments");
+assert.equal(prBranchFromCommitRefs(["tag: v1.2.0"]), null);
 
 assert.equal(
   topInteractionLayer({ dialog: true, command: true, keymap: true, contextMenu: true }),
@@ -164,8 +169,9 @@ assert.equal(matchesCommitQuery(c, "nope"), false);
 assert.deepEqual(diffTargetFor(mm[0]), { mode: "staged", file: "src/app.ts" });
 assert.deepEqual(diffTargetFor(mm[1]), { mode: "worktree", file: "src/app.ts" });
 assert.deepEqual(diffTargetFor(untracked), { mode: "untracked", file: "notes.txt" });
-assert.deepEqual(diffTargetFor(conflict), { mode: "worktree", file: "src/conflict.ts" });
-assert.equal(diffModeMatchesArea("worktree", "conflict"), true);
+assert.deepEqual(diffTargetFor(conflict), { mode: "conflict", file: "src/conflict.ts" });
+assert.equal(diffModeMatchesArea("conflict", "conflict"), true);
+assert.equal(diffModeMatchesArea("worktree", "conflict"), false);
 assert.equal(diffModeMatchesArea("staged", "unstaged"), false);
 
 // stage-the-open-file: worktree diff follows the file into the index

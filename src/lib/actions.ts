@@ -507,6 +507,17 @@ export async function doResolve(path: string, file: string, side: "ours" | "thei
   }
 }
 
+/** Merge editor accepted one conflict block — write the rebuilt file back and
+ *  refresh so the remaining blocks re-render. No repoOp veil: it's a local write. */
+export async function doSaveConflictResolution(path: string, file: string, content: string) {
+  try {
+    await git.writeConflictFile(path, file, content);
+    refreshRepoScope(path, "working-tree");
+  } catch (err) {
+    app().showToast("Resolve failed", String(err), "err");
+  }
+}
+
 export async function doMarkResolved(path: string, file: string) {
   try {
     const result = await repoOp(path, "Mark resolved", "foreground", "working-tree", () => git.markResolved(path, file));

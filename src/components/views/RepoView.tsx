@@ -14,7 +14,7 @@ import {
   doStage, doStashPush, doUndoCommit, doUnstage, openOnRemote,
 } from "../../lib/actions";
 import type { StatusEntry } from "../../lib/types";
-import { adjacentStatusSelection, diffTargetFor, isSameStatusEntry, matchesCommitQuery, nextPanel, repoShortcutAction, stageableEntries, visibleStatusOrder } from "../../lib/gitUi";
+import { adjacentStatusSelection, diffTargetFor, isSameStatusEntry, matchesCommitQuery, nextPanel, prBranchFromCommitRefs, repoShortcutAction, stageableEntries, visibleStatusOrder } from "../../lib/gitUi";
 
 export function RepoView({ tabId, active }: { tabId: string; active: boolean }) {
   const { ui, repo, patchRepoTab, vimKeys, operation } = useApp(
@@ -298,7 +298,11 @@ export function RepoView({ tabId, active }: { tabId: string; active: boolean }) 
           });
           break;
         case "o":
-          if (ui.focusedPanel === "graph" && ui.selectedCommit) void openOnRemote(path, "commit", ui.selectedCommit);
+          if (ui.focusedPanel === "graph" && ui.selectedCommit) {
+            const commit = commits.find((item) => item.hash === ui.selectedCommit);
+            const branch = commit && prBranchFromCommitRefs(commit.refs, remoteBranches);
+            void openOnRemote(path, branch ? "pr" : "commit", branch ?? ui.selectedCommit);
+          }
           else void openOnRemote(path, "pr", ui.selectedBranch ?? currentBranch);
           break;
         case "y": {

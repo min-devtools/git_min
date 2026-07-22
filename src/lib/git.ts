@@ -81,6 +81,12 @@ export const resolveFile = (path: string, file: string, side: "ours" | "theirs")
 export const markResolved = (path: string, file: string) =>
   invoke<void>("mark_resolved", { path, file });
 
+/** Raw worktree content of a conflicted file (with markers) for the merge editor. */
+export const conflictFile = (path: string, file: string) =>
+  invoke<string>("conflict_file", { path, file });
+export const writeConflictFile = (path: string, file: string, content: string) =>
+  invoke<void>("write_conflict_file", { path, file, content });
+
 export const stashList = (path: string) => invoke<StashInfo[]>("stash_list", { path });
 export const stashPush = (path: string, message?: string) =>
   invoke<string>("stash_push", { path, message });

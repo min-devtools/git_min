@@ -1,4 +1,4 @@
-import { buildHunkPatch, parseUnifiedDiff } from "./diffModel";
+import { buildHunkPatch, buildPatchForHunk, parseUnifiedDiff, splitDiffHunk } from "./diffModel";
 
 const assert = Object.assign(
   (condition: unknown, message = "assertion failed") => { if (!condition) throw new Error(message); },
@@ -80,5 +80,44 @@ const untracked = parseUnifiedDiff("@@ -0,0 +1,2 @@\n+hello\n+world\n");
 assert.deepEqual(untracked.hunks[0].inline.map((line) => line.newNumber), [1, 2]);
 assert.deepEqual(untracked.oldSourceLines, []);
 assert.deepEqual(untracked.newSourceLines, ["hello", "world"]);
+
+const splittable = parseUnifiedDiff([
+  "diff --git a/sample.txt b/sample.txt",
+  "--- a/sample.txt",
+  "+++ b/sample.txt",
+  "@@ -1,10 +1,10 @@",
+  " a",
+  "-b",
+  "+B",
+  " c",
+  " d",
+  " e",
+  " f",
+  "-g",
+  "+G",
+  " h",
+  " i",
+  " j",
+  "\\ No newline at end of file",
+  "",
+].join("\n"));
+const splitHunks = splitDiffHunk(splittable.hunks[0]);
+assert.equal(splitHunks.length, 2, "separated change groups split into two hunks");
+assert.equal(splitHunks[0].header, "@@ -1,6 +1,6 @@");
+assert.equal(splitHunks[1].header, "@@ -3,8 +3,8 @@");
+assert.deepEqual(splitHunks[0].inline.slice(-4).map((line) => line.text), ["c", "d", "e", "f"]);
+assert.deepEqual(splitHunks[1].inline.slice(0, 4).map((line) => line.text), ["c", "d", "e", "f"]);
+
+const firstSplitPatch = buildPatchForHunk(splittable, splitHunks[0]);
+assert(firstSplitPatch.includes("-b\n+B\n"));
+assert(!firstSplitPatch.includes("-g\n+G\n"));
+const secondSplitPatch = buildPatchForHunk(splittable, splitHunks[1]);
+assert(!secondSplitPatch.includes("-b\n+B\n"));
+assert(secondSplitPatch.includes("-g\n+G\n"));
+assert(secondSplitPatch.includes("\\ No newline at end of file\n"), "split patches preserve no-newline markers");
+
+const indivisible = splitDiffHunk(model.hunks[0]);
+assert.equal(indivisible.length, 1);
+assert.equal(indivisible[0], model.hunks[0], "an indivisible hunk is returned unchanged");
 
 console.log("diff model tests passed");

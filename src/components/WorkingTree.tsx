@@ -5,7 +5,6 @@ import {
   doGenerateCommitMessage,
   doDiscard,
   doMarkResolved,
-  doResolve,
   doStage,
   doUnstage,
 } from "../lib/actions";
@@ -19,6 +18,7 @@ import {
   folderTreeEntryCount,
   isFolderCollapsed,
   isSameStatusEntry,
+  resolutionLabels,
   stageableEntries,
   statusEntryKey,
   toggleFolder,
@@ -36,20 +36,6 @@ function changeCode(entry: StatusEntry): string {
   if (entry.area === "conflict") return "U";
   const code = entry.area === "staged" ? entry.code[0] : entry.code[1];
   return code === "." ? " " : code;
-}
-
-function resolutionLabels(info: ReturnType<typeof useRepoInfo>["data"]) {
-  if (info?.rebasing) {
-    return {
-      ours: "Base",
-      theirs: "Replayed commit",
-      title: "During rebase: Base is the branch being rebased onto; Replayed commit is your commit being applied.",
-    };
-  }
-  if (info?.cherryPicking) {
-    return { ours: "Current branch", theirs: "Picked commit", title: "Choose which side should replace the file, then GitMin stages it as resolved." };
-  }
-  return { ours: "Current branch", theirs: "Incoming branch", title: "Choose which side should replace the file, then GitMin stages it as resolved." };
 }
 
 export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; ui: RepoTabUI }) {
@@ -120,9 +106,8 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
         <span className="change-actions">
           {entry.area === "conflict" ? (
             <>
-              <button title={`${labels.ours}. ${labels.title}`} onClick={(event) => { event.stopPropagation(); void doResolve(path, entry.path, "ours"); }}>{labels.ours}</button>
-              <button title={`${labels.theirs}. ${labels.title}`} onClick={(event) => { event.stopPropagation(); void doResolve(path, entry.path, "theirs"); }}>{labels.theirs}</button>
-              <button title="Open in editor" onClick={(event) => { event.stopPropagation(); void openPath(`${path}/${entry.path}`).catch((err) => showToast("Open failed", String(err), "err")); }}><Icon name="pencil" size={12} /></button>
+              <button title="Resolve in merge view" onClick={(event) => { event.stopPropagation(); selectEntry(entry); }}><Icon name="git-merge" size={12} /></button>
+              <button title="Open in external editor" onClick={(event) => { event.stopPropagation(); void openPath(`${path}/${entry.path}`).catch((err) => showToast("Open failed", String(err), "err")); }}><Icon name="pencil" size={12} /></button>
               <button title="Mark the edited file resolved" onClick={(event) => { event.stopPropagation(); void doMarkResolved(path, entry.path); }}><Icon name="check" size={12} /></button>
             </>
           ) : entry.area === "staged" ? (
@@ -142,8 +127,11 @@ export function WorkingTree({ path, tabId, ui }: { path: string; tabId: string; 
 
   const renderFolderTree = (node: FolderTreeNode<StatusEntry>, depth: number) => {
     const paddingLeft = `${depth * 14 + 8}px`;
+    // no key here: each section's root fragment is a positional child of .working-tree,
+    // and a shared key ("." for every root) collides across sections — React then
+    // duplicates DOM on every status refetch instead of updating in place
     return (
-      <Fragment key={node.dir || "."}>
+      <Fragment>
         {node.entries.map((entry) => row(entry, depth))}
         {node.children.map((child) => {
           const collapsed = isFolderCollapsed(collapsedFolders, child.dir);

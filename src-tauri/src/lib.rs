@@ -973,6 +973,28 @@ async fn mark_resolved(path: String, file: String) -> Result<(), String> {
     git_async(path, vec!["add".into(), "--".into(), file]).await.map(|_| ())
 }
 
+/// Raw worktree content of a conflicted file — the merge editor reads the
+/// conflict markers straight from disk (git diff shows combined diffs the
+/// unified parser cannot render).
+#[tauri::command]
+async fn conflict_file(path: String, file: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        std::fs::read_to_string(Path::new(&path).join(&file)).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Write back the (partially) resolved content of a conflicted file.
+#[tauri::command]
+async fn write_conflict_file(path: String, file: String, content: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        std::fs::write(Path::new(&path).join(&file), content).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// lazygit's `z`: soft-reset HEAD~1 so the commit's changes land back in the
 /// index. Returns the old message so the UI can refill the commit box.
 #[tauri::command]
@@ -1294,6 +1316,8 @@ pub fn run() {
             merge_continue,
             resolve_file,
             mark_resolved,
+            conflict_file,
+            write_conflict_file,
             stash_list,
             undo_commit,
             stash_push,

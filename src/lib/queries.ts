@@ -111,12 +111,23 @@ export const useCommitDetail = (path: string | undefined, hash: string | null) =
 
 export const useDiff = (
   path: string | undefined,
-  diff: { mode: "commit" | "staged" | "worktree" | "untracked" | "stash"; file: string; hash?: string } | null,
+  diff: { mode: "commit" | "staged" | "worktree" | "untracked" | "stash" | "conflict"; file: string; hash?: string } | null,
 ) =>
   useQuery({
     queryKey: [path, "diff", diff?.mode, diff?.file, diff?.hash],
-    queryFn: () => git.diffFile(path!, diff!.mode, diff!.file, diff!.hash),
-    enabled: !!path && !!diff,
+    // conflict mode never reaches diff_file — the merge editor uses useConflictFile
+    queryFn: () => git.diffFile(path!, diff!.mode as Exclude<NonNullable<typeof diff>["mode"], "conflict">, diff!.file, diff!.hash),
+    enabled: !!path && !!diff && diff.mode !== "conflict",
+  });
+
+/** Polls: the user may be editing the file in an external editor while the
+ *  merge editor is open — removed markers must surface without a manual refresh. */
+export const useConflictFile = (path: string | undefined, file: string | null) =>
+  useQuery({
+    queryKey: [path, "diff", "conflict-file", file],
+    queryFn: () => git.conflictFile(path!, file!),
+    enabled: !!path && !!file,
+    refetchInterval: 5000,
   });
 
 export const useStashes = (path: string | undefined) =>

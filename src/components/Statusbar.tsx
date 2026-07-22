@@ -1,6 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { activeRepo, useApp } from "../store";
 import { openExternalUrl } from "../lib/externalLinks";
+import { UpdateBadge } from "../lib/updateCheck";
 
 export function Statusbar() {
   const repo = useApp((s) => activeRepo(s));
@@ -23,6 +24,7 @@ export function Statusbar() {
         <span>{vimKeys ? "vim keys · ? for help" : ""}</span>
         <span>{activeTitle ?? ""}</span>
         <span>v{__APP_VERSION__}</span>
+        <UpdateBadge repo="min-devtools/git_min" />
         <span
           className="credit"
           style={{ cursor: "pointer" }}

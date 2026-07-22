@@ -12,6 +12,7 @@
     "run:release": "tauri build --no-bundle && ./src-tauri/target/release/gitmin",
     "generate:syntax-themes": "node scripts/generate-syntax-themes.mjs",
     "test:ui": "npx tsx src/lib/gitUi.test.ts",
+    "test:conflicts": "npx tsx src/lib/conflictModel.test.ts",
     "test:workspace": "node tests/git-workspace-contract.test.mjs",
     "test:layout": "npx tsx src/lib/graphLayout.test.ts",
     "test:highlight": "npx tsx src/lib/highlight.test.ts",
